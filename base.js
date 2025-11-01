@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    // TU CONFIGURACIÓN DE FIREBASE YA INTEGRADA
     const firebaseConfig = {
       apiKey: "AIzaSyB5XMrJtKg-EzP3Tea3-yllj-NZEoDXJlY",
       authDomain: "proyecto-genesis-f2425.firebaseapp.com",
@@ -13,21 +14,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
     
+    // --- CONEXIÓN AL EMULADOR LOCAL ---
     if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
+        console.log("BASE: MODO DE PRUEBA LOCAL DETECTADO. CONECTANDO A EMULADORES...");
         auth.useEmulator("http://localhost:9099");
         db.useEmulator("localhost", 8080);
+        // No se necesita emulador de functions para esta versión
     }
 
-    const BASE_CONFIG = { UPGRADES: { Defenses: { name: "Torretas de Defensa", cost: 1000 }, Attacks: { name: "Flota de Ataque", cost: 1000 } } };
+    // --- CONFIGURACIÓN Y SELECTORES ---
+    const BASE_CONFIG = {
+        UPGRADES: {
+            Defenses: { name: "Torretas de Defensa", cost: 1000 },
+            Attacks: { name: "Flota de Ataque", cost: 1000 }
+        }
+    };
     
     let gameState = {};
     let currentUser = null;
-    const moneyCountEl = document.getElementById('money-count'), upgradesListEl = document.getElementById('base-upgrades-list'), attackPlayerBtn = document.getElementById('attack-player-btn'), attackModal = document.getElementById('attack-modal'), playerListContainer = document.getElementById('player-list-container'), attackLogEl = document.getElementById('attack-log'), loadingOverlay = document.getElementById('loading-overlay'), allianceInfoContainer = document.getElementById('alliance-info-container');
+    const moneyCountEl = document.getElementById('money-count');
+    const upgradesListEl = document.getElementById('base-upgrades-list');
+    const attackPlayerBtn = document.getElementById('attack-player-btn');
+    const attackModal = document.getElementById('attack-modal');
+    const playerListContainer = document.getElementById('player-list-container');
+    const attackLogEl = document.getElementById('attack-log');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const allianceInfoContainer = document.getElementById('alliance-info-container');
 
+    // --- LÓGICA DE LA INTERFAZ ---
     function updateUI() {
         if (typeof gameState.money === 'undefined') return;
         moneyCountEl.textContent = Math.floor(gameState.money).toLocaleString();
-        upgradesListEl.innerHTML = Object.entries(BASE_CONFIG.UPGRADES).map(([key, upgrade]) => { const level = gameState.baseLevels ? (gameState.baseLevels[key] || 0) : 0; const cost = Math.ceil(upgrade.cost * Math.pow(1.5, level)); return `<div class="upgrade-line"><span>${upgrade.name} (Nvl ${level})</span><button onclick="buyBaseUpgrade('${key}')" class="upgrade-btn ${gameState.money < cost ? 'disabled':''}">Coste: ${cost.toLocaleString()}</button></div>`; }).join('');
+        upgradesListEl.innerHTML = Object.entries(BASE_CONFIG.UPGRADES).map(([key, upgrade]) => {
+            const level = gameState.baseLevels ? (gameState.baseLevels[key] || 0) : 0;
+            const cost = Math.ceil(upgrade.cost * Math.pow(1.5, level));
+            return `<div class="upgrade-line"><span>${upgrade.name} (Nvl ${level})</span><button onclick="buyBaseUpgrade('${key}')" class="upgrade-btn ${gameState.money < cost ? 'disabled':''}">Coste: ${cost.toLocaleString()}</button></div>`;
+        }).join('');
         renderAllianceUI();
     }
     
@@ -42,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadAllianceMembers() {
         const listEl = document.getElementById('alliance-members-list');
-        if (!listEl) return;
+        if (!listEl || !gameState.alliance) return;
         const allianceDoc = await db.collection('alliances').doc(gameState.alliance).get();
         if (allianceDoc.exists) {
             const members = allianceDoc.data().members || [];
@@ -50,12 +72,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    window.createAlliance = () => { const name = prompt("Nombre para tu nueva alianza:"); if (name) { db.collection('alliances').doc(name).set({ leader: currentUser.uid, members: [{ id: currentUser.uid, name: currentUser.displayName }] }).then(() => { db.collection('players').doc(currentUser.uid).update({ alliance: name }); }); } };
-    window.joinAlliance = () => { const name = prompt("Nombre de la alianza a la que quieres unirte:"); if (name) { db.collection('alliances').doc(name).update({ members: firebase.firestore.FieldValue.arrayUnion({ id: currentUser.uid, name: currentUser.displayName }) }).then(() => { db.collection('players').doc(currentUser.uid).update({ alliance: name }); }); } };
-    window.leaveAlliance = async () => { if (confirm("¿Seguro que quieres abandonar tu alianza?")) { const allianceName = gameState.alliance; await db.collection('players').doc(currentUser.uid).update({ alliance: null }); const allianceRef = db.collection('alliances').doc(allianceName); await allianceRef.update({ members: firebase.firestore.FieldValue.arrayRemove({ id: currentUser.uid, name: currentUser.displayName }) }); } };
+    // --- ACCIONES DEL JUGADOR ---
+    window.buyBaseUpgrade = (key) => {
+        if (!gameState.baseLevels) gameState.baseLevels = { Defenses: 0, Attacks: 0 };
+        const level = gameState.baseLevels[key] || 0;
+        const cost = Math.ceil(BASE_CONFIG.UPGRADES[key].cost * Math.pow(1.5, level));
+        if (gameState.money >= cost) {
+            gameState.money -= cost;
+            gameState.baseLevels[key] = level + 1;
+            db.collection('players').doc(auth.currentUser.uid).update({ 
+                [`baseLevels.${key}`]: firebase.firestore.FieldValue.increment(1),
+                money: firebase.firestore.FieldValue.increment(-cost)
+            });
+        }
+    };
 
-    window.buyBaseUpgrade = (key) => { if (!gameState.baseLevels) gameState.baseLevels = { Defenses: 0, Attacks: 0 }; const level = gameState.baseLevels[key] || 0; const cost = Math.ceil(BASE_CONFIG.UPGRADES[key].cost * Math.pow(1.5, level)); if (gameState.money >= cost) { gameState.money -= cost; gameState.baseLevels[key] = level + 1; db.collection('players').doc(auth.currentUser.uid).set({ baseLevels: gameState.baseLevels, money: gameState.money }, { merge: true }); } };
-    attackPlayerBtn.addEventListener('click', async () => { /* ... (código sin cambios) ... */ });
+    attackPlayerBtn.addEventListener('click', async () => {
+        attackModal.classList.remove('hidden');
+        playerListContainer.innerHTML = "<p>Buscando pilotos...</p>";
+        try {
+            const snapshot = await db.collection('leaderboard').orderBy('money', 'desc').limit(20).get();
+            const players = [];
+            snapshot.forEach(doc => {
+                if (doc.id !== currentUser.uid) {
+                    players.push({ id: doc.id, ...doc.data() });
+                }
+            });
+            playerListContainer.innerHTML = players.map(p => `<div class="player-list-item"><span>${p.playerName} (Fortuna: $${p.money.toLocaleString()})</span><button onclick="attackPlayer('${p.id}', '${p.playerName}')">Atacar</button></div>`).join('') || "<p>No se encontraron otros pilotos.</p>";
+        } catch(error) {
+            console.error("Error al buscar jugadores:", error);
+            playerListContainer.innerHTML = "<p>Error al contactar con la red de pilotos.</p>";
+        }
+    });
+    
     attackModal.querySelector('.close-btn').addEventListener('click', () => attackModal.classList.add('hidden'));
 
     window.attackPlayer = async (targetId, targetName) => {
@@ -102,6 +151,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
+    // --- LÓGICA DE ALIANZAS ---
+    window.createAlliance = async () => {
+        if (gameState.alliance) { alert("Ya perteneces a una alianza."); return; }
+        const name = prompt("Nombre para tu nueva alianza:");
+        if (name && name.trim().length > 2) {
+            const allianceRef = db.collection('alliances').doc(name);
+            const doc = await allianceRef.get();
+            if (doc.exists) { alert("Una alianza con este nombre ya existe."); return; }
+            await allianceRef.set({ leader: currentUser.uid, members: [{ id: currentUser.uid, name: currentUser.displayName }] });
+            await db.collection('players').doc(currentUser.uid).update({ alliance: name });
+        } else {
+            alert("El nombre de la alianza es demasiado corto o inválido.");
+        }
+    };
+
+    window.joinAlliance = async () => {
+        if (gameState.alliance) { alert("Ya perteneces a una alianza."); return; }
+        const name = prompt("Nombre de la alianza a la que quieres unirte:");
+        if (name) {
+            const allianceRef = db.collection('alliances').doc(name);
+            const doc = await allianceRef.get();
+            if (!doc.exists) { alert("Esa alianza no existe."); return; }
+            await allianceRef.update({ members: firebase.firestore.FieldValue.arrayUnion({ id: currentUser.uid, name: currentUser.displayName }) });
+            await db.collection('players').doc(currentUser.uid).update({ alliance: name });
+        }
+    };
+    
+    window.leaveAlliance = async () => {
+        if (!gameState.alliance || !confirm("¿Seguro que quieres abandonar tu alianza?")) return;
+        const allianceName = gameState.alliance;
+        await db.collection('players').doc(currentUser.uid).update({ alliance: null });
+        const allianceRef = db.collection('alliances').doc(allianceName);
+        await allianceRef.update({ members: firebase.firestore.FieldValue.arrayRemove({ id: currentUser.uid, name: currentUser.displayName }) });
+    };
+    
+    // --- CARGA DE DATOS Y NOTIFICACIONES ---
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
@@ -111,18 +196,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     gameState = doc.data();
                     if (!gameState.baseLevels) gameState.baseLevels = { Defenses: 0, Attacks: 0 };
                     if (!gameState.notifications) gameState.notifications = [];
+                    
                     const unreadNotifications = gameState.notifications.filter(n => !n.read);
                     if (unreadNotifications.length > 0) {
+                        let notificationMessages = "NUEVOS REPORTES DE COMBATE:\n\n";
                         unreadNotifications.forEach(n => {
-                            alert(`NUEVO REPORTE DE COMBATE:\n\n${n.message}`);
+                            notificationMessages += `- ${n.message}\n`;
                             const notifIndex = gameState.notifications.findIndex(item => item.id === n.id);
                             if (notifIndex > -1) { gameState.notifications[notifIndex].read = true; }
                         });
+                        alert(notificationMessages);
                         db.collection('players').doc(user.uid).update({ notifications: gameState.notifications });
                     }
                     updateUI();
                 } else {
-                    gameState = { money: 0, baseLevels: { Defenses: 0, Attacks: 0 }, notifications: [] };
+                    // Si el jugador no tiene datos (primera vez en la base), se crea un estado por defecto
+                    gameState = { money: 0, baseLevels: { Defenses: 0, Attacks: 0 }, notifications: [], alliance: null };
                     updateUI();
                 }
             }, (error) => {

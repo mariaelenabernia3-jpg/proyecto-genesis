@@ -53,7 +53,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- ESTADO Y DOM ---
     let gameState = {};
     let marketPrices = {};
-    const moneyCountEl = document.getElementById('money-count'), planetNameEl = document.getElementById('planet-name'), inventoryListEl = document.getElementById('inventory-list'), modulesListEl = document.getElementById('modules-list'), upgradesListEl = document.getElementById('upgrades-list'), marketListEl = document.getElementById('market-list'), travelListEl = document.getElementById('travel-list'), loadingOverlay = document.getElementById('loading-overlay');
+    const moneyCountEl = document.getElementById('money-count'), 
+          planetNameEl = document.getElementById('planet-name'), 
+          inventoryListEl = document.getElementById('inventory-list'), 
+          modulesListEl = document.getElementById('modules-list'), 
+          upgradesListEl = document.getElementById('upgrades-list'), 
+          marketListEl = document.getElementById('market-list'), 
+          travelListEl = document.getElementById('travel-list'), 
+          loadingOverlay = document.getElementById('loading-overlay');
 
     // --- SISTEMA DE GUARDADO ---
     let saveTimeout;
@@ -70,11 +77,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- LÓGICA DE LA INTERFAZ (UI) ---
     function getDefaultState() { 
         return { 
-            money: 100, currentPlanet: 'Terra', 
+            money: 200, 
+            currentPlanet: 'Terra', 
             inventory: Object.keys(CONFIG.MATERIALS).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), 
             upgradeLevels: Object.keys(CONFIG.UPGRADES).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), 
-            modules: [], unlockedPlanets: ['Terra'], lastLogin: null, 
-            achievedMissions: [], completedMissions: [],
+            modules: [], 
+            unlockedPlanets: ['Terra'], 
+            lastLogin: null, 
+            achievedMissions: [], 
+            completedMissions: [],
             baseLevels: { Defenses: 0, Attacks: 0 },
             notifications: [],
             alliance: null 
@@ -107,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameState.currentPlanet = key;
                 if (!gameState.achievedMissions.includes('M03') && key === 'Mars') {
                     gameState.achievedMissions.push('M03');
-                    alert(`¡Misión Actualizada! Has completado el objetivo de "Viajero Frecuente". ¡Ve al panel de misiones para reclamar tu recompensa!`);
+                    alert(`¡Misión Actualizada! Has completado el objetivo de "Viajero Frecuente".`);
                 }
                 requestSave();
             } else {
@@ -124,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const singularityCore = CONFIG.MODULES.find(m => m.id === 's01');
             const newModule = { ...singularityCore, id: `mod_${Date.now()}` };
             gameState.modules.push(newModule);
-            alert(`\n\n¡¡¡HALLAZGO TRASCENDENTAL!!!\n\nEntre los restos de un artefacto, has encontrado un ${newModule.name}. Este objeto es de un valor incalculable.\n\n`);
+            alert(`\n\n¡¡¡HALLAZGO TRASCENDENTAL!!!\n\nHas encontrado un ${newModule.name}.\n\n`);
             requestSave();
             return;
         }
@@ -149,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function gameLoop() {
         const production = calculateProduction();
         let artifactProductionPerTick = (production['AlienArtifacts'] || 0) / 10;
-        if(artifactProductionPerTick > 0 && Math.random() < artifactProductionPerTick){
+        if (artifactProductionPerTick > 0 && Math.random() < artifactProductionPerTick) {
             checkForModuleDrop('AlienArtifacts');
         }
         for (const material in production) {
@@ -158,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateUI();
     }
     
-    // --- LÓGICA DE INICIALIZACIÓN ---
+    // --- LÓGICA DE INICIALIZACIÓN ROBUSTA ---
     auth.onAuthStateChanged(user => {
         if (user) {
             initializeGame();
@@ -169,11 +180,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function initializeGame() {
         loadingOverlay.classList.remove('hidden');
-        await loadGame();
-        await loadInitialMarketPrices();
+        
+        await Promise.all([
+            loadGame(),
+            loadInitialMarketPrices()
+        ]);
+        
+        updateUI();
+
         setInterval(gameLoop, 100);
         setInterval(requestSave, 15000);
         window.addEventListener('beforeunload', saveGame);
+        
         listenForMarketUpdates();
         loadingOverlay.classList.add('hidden');
     }
