@@ -93,39 +93,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function updateUI() {
-        if (typeof gameState.money === 'undefined' || Object.keys(marketPrices).length === 0) return;
+        if (typeof gameState.money === 'undefined') return;
+        
         moneyCountEl.textContent = Math.floor(gameState.money).toLocaleString();
         planetNameEl.textContent = CONFIG.PLANETS[gameState.currentPlanet].name;
         inventoryListEl.innerHTML = Object.entries(gameState.inventory).map(([key, value]) => `<div class="resource-line"><span class="item-name">${CONFIG.MATERIALS[key].name}</span><span class="item-details">${Math.floor(value).toLocaleString()}</span></div>`).join('') || "<p>Bodega de carga vacía.</p>";
         upgradesListEl.innerHTML = Object.entries(gameState.upgradeLevels).map(([key, level]) => { const upgrade = CONFIG.UPGRADES[key]; const cost = Math.ceil(upgrade.cost * Math.pow(1.15, level)); return `<div class="resource-line"><div class="item-name">${upgrade.name} (Nvl ${level})</div><button onclick="buyUpgrade('${key}')" class="upgrade-btn ${gameState.money < cost ? 'disabled' : ''}">Coste: ${cost.toLocaleString()}</button></div>`; }).join('');
-        marketListEl.innerHTML = Object.entries(CONFIG.MATERIALS).map(([key, material]) => { const modifier = marketPrices[gameState.currentPlanet][key]; const price = material.baseValue * modifier; const hasMaterial = gameState.inventory[key] >= 1; return `<div class="resource-line"><div class="item-name">${material.name}<div class="item-details"><span>Precio: $${price.toFixed(2)}</span></div></div><div class="button-group"><button onclick="sellMaterial('${key}', 1)" class="sell-btn ${!hasMaterial ? 'disabled' : ''}">Vender 1</button><button onclick="sellMaterial('${key}', 'all')" class="sell-all-btn ${!hasMaterial ? 'disabled' : ''}">Vender Todo</button></div></div>`; }).join('');
+        
+        if (marketPrices && marketPrices[gameState.currentPlanet]) {
+            marketListEl.innerHTML = Object.entries(CONFIG.MATERIALS).map(([key, material]) => { const modifier = marketPrices[gameState.currentPlanet][key]; const price = material.baseValue * modifier; const hasMaterial = gameState.inventory[key] >= 1; return `<div class="resource-line"><div class="item-name">${material.name}<div class="item-details"><span>Precio: $${price.toFixed(2)}</span></div></div><div class="button-group"><button onclick="sellMaterial('${key}', 1)" class="sell-btn ${!hasMaterial ? 'disabled' : ''}">Vender 1</button><button onclick="sellMaterial('${key}', 'all')" class="sell-all-btn ${!hasMaterial ? 'disabled' : ''}">Vender Todo</button></div></div>`; }).join('');
+        } else {
+            marketListEl.innerHTML = "<p>Sincronizando con la red de mercados...</p>";
+        }
+
         travelListEl.innerHTML = Object.entries(CONFIG.PLANETS).map(([key, planet]) => { const isUnlocked = gameState.unlockedPlanets.includes(key); const cost = planet.travelCost; return `<button onclick="travelToPlanet('${key}')" class="travel-btn ${gameState.currentPlanet === key ? 'disabled' : ''}">${isUnlocked ? `Viajar a ${planet.name}` : `Desbloquear ruta a ${planet.name} <span class='travel-cost'>($${cost.toLocaleString()})</span>`}</button>`; }).join('');
-        modulesListEl.innerHTML = gameState.modules.map(module => `<div class="resource-line module-item"><div class="module-info"><h4 class="item-rarity ${module.rarity}">${module.name}</h4><p>${module.description}</p></div></div>`).join('') || "<p>No hay módulos instalados.</p>";
+        modulesListEl.innerHTML = (gameState.modules || []).map(module => `<div class="resource-line module-item"><div class="module-info"><h4 class="item-rarity ${module.rarity}">${module.name}</h4><p>${module.description}</p></div></div>`).join('') || "<p>No hay módulos instalados.</p>";
     }
 
     // --- ACCIONES DEL JUGADOR ---
-    window.sellMaterial = (key, amount) => { let amountToSell = (amount === 'all') ? Math.floor(gameState.inventory[key]) : parseInt(amount, 10); if (gameState.inventory[key] >= amountToSell && amountToSell > 0) { const material = CONFIG.MATERIALS[key]; const modifier = marketPrices[gameState.currentPlanet][key]; let price = material.baseValue * modifier; gameState.modules.forEach(m => { if (m.effect.type === 'sell_all') price *= m.effect.value; }); gameState.inventory[key] -= amountToSell; gameState.money += price * amountToSell; requestSave(); } };
-    window.buyUpgrade = (key) => { const upgrade = CONFIG.UPGRADES[key]; const cost = Math.ceil(upgrade.cost * Math.pow(1.15, gameState.upgradeLevels[key])); if (gameState.money >= cost) { gameState.money -= cost; gameState.upgradeLevels[key]++; requestSave(); } };
-    window.travelToPlanet = (key) => {
-        if (gameState.currentPlanet === key) return;
-        const isUnlocked = gameState.unlockedPlanets.includes(key);
-        if (isUnlocked) { gameState.currentPlanet = key; requestSave();
-        } else {
-            const cost = CONFIG.PLANETS[key].travelCost;
-            if (gameState.money >= cost) {
-                gameState.money -= cost;
-                gameState.unlockedPlanets.push(key);
-                gameState.currentPlanet = key;
-                if (!gameState.achievedMissions.includes('M03') && key === 'Mars') {
-                    gameState.achievedMissions.push('M03');
-                    alert(`¡Misión Actualizada! Has completado el objetivo de "Viajero Frecuente".`);
-                }
-                requestSave();
-            } else {
-                alert(`Créditos insuficientes para desbloquear esta ruta. Necesitas $${cost.toLocaleString()}.`);
-            }
-        }
-    };
+    window.sellMaterial = (key, amount) => { let amountToSell = (amount === 'all') ? Math.floor(gameState.inventory[key]) : parseInt(amount, 10); if (gameState.inventory[key] >= amountToSell && amountToSell > 0) { const material = CONFIG.MATERIALS[key]; const modifier = marketPrices[gameState.currentPlanet][key]; let price = material.baseValue * modifier; (gameState.modules || []).forEach(m => { if (m.effect.type === 'sell_all') price *= m.effect.value; }); gameState.inventory[key] -= amountToSell; gameState.money += price * amountToSell; requestSave(); } };
+    window.buyUpgrade = (key) => { const upgrade = CONFIG.UPGRADES[key]; const cost = Math.ceil(upgrade.cost * Math.pow(1.15, (gameState.upgradeLevels[key] || 0))); if (gameState.money >= cost) { gameState.money -= cost; gameState.upgradeLevels[key]++; requestSave(); } };
+    window.travelToPlanet = (key) => { if (gameState.currentPlanet === key) return; const isUnlocked = gameState.unlockedPlanets.includes(key); if (isUnlocked) { gameState.currentPlanet = key; requestSave(); } else { const cost = CONFIG.PLANETS[key].travelCost; if (gameState.money >= cost) { gameState.money -= cost; gameState.unlockedPlanets.push(key); gameState.currentPlanet = key; if (!gameState.achievedMissions.includes('M03') && key === 'Mars') { gameState.achievedMissions.push('M03'); alert(`¡Misión Actualizada! Has completado el objetivo de "Viajero Frecuente".`); } requestSave(); } else { alert(`Créditos insuficientes para desbloquear esta ruta. Necesitas $${cost.toLocaleString()}.`); } } };
 
     // --- LÓGICA DEL JUEGO ---
     function checkForModuleDrop(materialKey) {
@@ -160,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function gameLoop() {
         const production = calculateProduction();
         let artifactProductionPerTick = (production['AlienArtifacts'] || 0) / 10;
-        if (artifactProductionPerTick > 0 && Math.random() < artifactProductionPerTick) {
+        if(artifactProductionPerTick > 0 && Math.random() < artifactProductionPerTick){
             checkForModuleDrop('AlienArtifacts');
         }
         for (const material in production) {
