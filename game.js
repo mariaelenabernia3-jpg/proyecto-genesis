@@ -29,11 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingOverlay = document.getElementById('loading-overlay');
 
     let saveTimeout;
-    function requestSave() {
-        clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(saveGame, 2000); 
-    }
-
+    function requestSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(saveGame, 2000); }
     function saveGame() {
         const user = auth.currentUser;
         if (user && typeof gameState.money !== 'undefined') {
@@ -43,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 playerName: playerName,
                 money: Math.floor(gameState.money)
             }, { merge: true });
-            console.log("Partida guardada en la nube.");
         }
     }
 
