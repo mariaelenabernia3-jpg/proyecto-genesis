@@ -107,22 +107,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function calculateProduction() {
         const production = {};
-        for (const key in CONFIG.UPGRADES) {
-            const upgrade = CONFIG.UPGRADES[key];
-            const level = gameState.upgradeLevels[key];
-            if (level > 0) {
-                for (const material in upgrade.baseProd) {
-                    production[material] = (production[material] || 0) + (upgrade.baseProd[material] * level);
-                }
-            }
-        }
-        gameState.modules.forEach(module => {
-            if (module.effect.type === 'prod_all') {
-                for (const mat in production) { production[mat] *= module.effect.value; }
-            } else if (module.effect.type === 'prod_single') {
-                if (production[module.effect.material]) { production[module.effect.material] *= module.effect.value; }
-            }
-        });
+        for (const key in CONFIG.UPGRADES) { const upgrade = CONFIG.UPGRADES[key]; const level = gameState.upgradeLevels[key]; if (level > 0) { for (const material in upgrade.baseProd) { production[material] = (production[material] || 0) + (upgrade.baseProd[material] * level); } } }
+        gameState.modules.forEach(module => { if (module.effect.type === 'prod_all') { for (const mat in production) { production[mat] *= module.effect.value; } } else if (module.effect.type === 'prod_single') { if (production[module.effect.material]) { production[module.effect.material] *= module.effect.value; } } });
         return production;
     }
 
@@ -130,10 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const production = calculateProduction();
         let artifactProductionPerTick = (production['AlienArtifacts'] || 0) / 10;
         if(artifactProductionPerTick > 0){
-            for(let i = 0; i < Math.floor(artifactProductionPerTick); i++){
-                checkForModuleDrop('AlienArtifacts');
-            }
-             if(Math.random() < (artifactProductionPerTick - Math.floor(artifactProductionPerTick))){
+             if(Math.random() < artifactProductionPerTick){
                 checkForModuleDrop('AlienArtifacts');
             }
         }
@@ -156,12 +139,22 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingOverlay.classList.add('hidden');
     }
 
+    // --- BLOQUE DE CÓDIGO CORREGIDO ---
     db.collection('marketState').doc('globalPrices').onSnapshot((doc) => {
         if (doc.exists) {
             marketPrices = doc.data();
             console.log("Precios del mercado actualizados en tiempo real.");
         } else {
-            console.log("No se encontraron precios de mercado. Asegúrate de haber desplegado la Cloud Function.");
+            console.log("Documento de precios no encontrado. Usando precios base por defecto.");
+            // Crea un objeto de precios base si el documento no existe
+            const defaultPrices = {};
+            for (const planetKey in CONFIG.PLANETS) {
+                defaultPrices[planetKey] = {};
+                for (const materialKey in CONFIG.MATERIALS) {
+                    defaultPrices[planetKey][materialKey] = 1.0; // Precio base (sin modificación)
+                }
+            }
+            marketPrices = defaultPrices;
         }
     });
 
