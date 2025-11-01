@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const missionsBtn = document.getElementById('missions-btn'), missionsList = document.getElementById('missions-list');
     const adminKeyInput = document.getElementById('admin-key-input'), adminPanel = document.getElementById('admin-panel'), deleteDataBtn = document.getElementById('delete-data-btn'), deleteAccountsBtn = document.getElementById('delete-accounts-btn');
     const authIconButton = document.getElementById('auth-icon-btn'), loginErrorMsg = document.getElementById('login-error-message'), registerErrorMsg = document.getElementById('register-error-message');
-    const allModals = document.querySelectorAll('.modal-overlay'), creditsBtn = document.getElementById('credits-btn'), leaderboardBtn = document.getElementById('leaderboard-btn'), startGameLink = document.getElementById('start-game-btn'), marketBtn = document.getElementById('market-btn');
+    const allModals = document.querySelectorAll('.modal-overlay'), baseBtn = document.getElementById('base-btn'), creditsBtn = document.getElementById('credits-btn'), leaderboardBtn = document.getElementById('leaderboard-btn'), startGameLink = document.getElementById('start-game-btn'), marketBtn = document.getElementById('market-btn');
     const userInfoDisplay = document.getElementById('user-info'), startGameBtnText = startGameLink.querySelector('span'), leaderboardContainer = document.getElementById('leaderboard-container'), loginForm = document.getElementById('login-form'), registerForm = document.getElementById('register-form');
     const showRegisterLink = document.getElementById('show-register'), showLoginLink = document.getElementById('show-login'), registerBtn = document.getElementById('register-btn'), loginBtn = document.getElementById('login-btn');
     const marketBuyTab = document.getElementById('market-buy-tab'), marketSellTab = document.getElementById('market-sell-tab'), marketBuyView = document.getElementById('market-buy-view'), marketSellView = document.getElementById('market-sell-view');
@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function closeModal(modal) { modal.classList.add('hidden'); }
     function openModal(modal) { clearAuthErrors(); modal.classList.remove('hidden'); }
 
+    baseBtn.addEventListener('click', (e) => { e.preventDefault(); if(auth.currentUser) { document.body.style.transition = 'opacity 1s ease-out'; document.body.style.opacity = '0'; setTimeout(() => { window.location.href = 'base.html'; }, 1000); } else { alert("Debes iniciar sesión para acceder a tu base."); }});
     creditsBtn.addEventListener('click', (e) => { e.preventDefault(); openModal(creditsModal); });
     leaderboardBtn.addEventListener('click', (e) => { e.preventDefault(); openModal(leaderboardModal); fetchAndDisplayLeaderboard(); });
     marketBtn.addEventListener('click', (e) => { e.preventDefault(); if (auth.currentUser) { openModal(marketModal); loadMarketplace(); } else { alert("Debes iniciar sesión para acceder al mercado."); } });
@@ -105,16 +106,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function checkDailyLogin() {
         if (!playerData) return;
-        const today = new Date().toISOString().slice(0, 10); // Formato YYYY-MM-DD
+        const today = new Date().toISOString().slice(0, 10);
         const lastLogin = playerData.lastLogin;
 
         if (lastLogin !== today) {
             const dailyMission = MISSIONS.find(m => m.requirement.type === 'daily_login');
             if(dailyMission) {
-                playerData.money += dailyMission.reward;
+                playerData.money = (playerData.money || 0) + dailyMission.reward;
                 playerData.lastLogin = today;
                 db.collection('players').doc(auth.currentUser.uid).update({ money: playerData.money, lastLogin: playerData.lastLogin });
-                alert(`¡Bienvenido de nuevo, ${auth.currentUser.displayName}!\n\nHas recibido ${dailyMission.reward} créditos por tu bonus de conexión diaria.`);
+                alert(`¡Bienvenido de nuevo, ${auth.currentUser.displayName || 'Piloto'}!\n\nHas recibido ${dailyMission.reward} créditos por tu bonus de conexión diaria.`);
             }
         }
     }
@@ -128,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playerData.achievedMissions = playerData.achievedMissions || [];
 
         missionsList.innerHTML = MISSIONS.map(mission => {
-            if (mission.requirement.type === 'daily_login') return ''; // No mostrar la misión de login diario en la lista
+            if (mission.requirement.type === 'daily_login') return '';
             const isClaimed = playerData.completedMissions.includes(mission.id);
             let progress = 0;
             let progressText = "";
@@ -136,8 +137,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             switch (mission.requirement.type) {
                 case 'money':
-                    progress = Math.min(100, (playerData.money / mission.requirement.value) * 100);
-                    progressText = `$${Math.floor(playerData.money).toLocaleString()} / $${mission.requirement.value.toLocaleString()}`;
+                    progress = Math.min(100, ((playerData.money || 0) / mission.requirement.value) * 100);
+                    progressText = `$${Math.floor(playerData.money || 0).toLocaleString()} / $${mission.requirement.value.toLocaleString()}`;
                     break;
                 case 'upgrade':
                     const currentLevel = (playerData.upgradeLevels && playerData.upgradeLevels[mission.requirement.key]) || 0;
@@ -153,12 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             isAchieved = progress >= 100;
             const canClaim = isAchieved && !isClaimed;
+            let missionClass = isClaimed ? 'claimed' : (canClaim ? 'achieved' : '');
 
-            let missionClass = '';
-            if (isClaimed) missionClass = 'claimed';
-            else if (canClaim) missionClass = 'achieved';
-
-            return `<div class="mission-item ${missionClass}"><div class="mission-header"><h3 class="mission-title">${mission.title}</h3><span class="mission-reward">Recompensa: $${mission.reward.toLocaleString()}</span></div><p class="mission-description">${mission.description}</p><div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%;"></div></div><p class="progress-text">${progressText}</p><button class="claim-btn ${isClaimed ? 'claimed-style' : ''} ${canClaim ? '' : 'disabled'}" onclick="claimMissionReward('${mission.id}')" ${canClaim ? '' : 'disabled'}>${isClaimed ? 'Reclamado' : (canClaim ? 'Reclamar' : 'En Progreso')}</button></div>`;
+            return `<div class="mission-item ${missionClass}"><div class="mission-header"><h3 class="mission-title">${mission.title}</h3><span class="mission-reward">Recompensa: $${mission.reward.toLocaleString()}</span></div><p class="mission-description">${mission.description}</p><div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%;"></div></div><p class="progress-text">${progressText}</p><button class="claim-btn ${isClaimed ? 'claimed-style' : ''}" onclick="claimMissionReward('${mission.id}')" ${!canClaim ? 'disabled' : ''}>${isClaimed ? 'Reclamado' : (canClaim ? 'Reclamar' : 'En Progreso')}</button></div>`;
         }).join('');
     }
 

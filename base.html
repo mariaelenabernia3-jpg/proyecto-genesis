@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base de Operaciones</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="base.style.css">
+</head>
+<body>
+    <div id="scanlines-overlay"></div>
+    <div id="loading-overlay" class="visible"><h1>CARGANDO PROTOCOLOS DE BASE...</h1></div>
+    <header id="game-header">
+        <a href="menu.html" class="back-btn">&laquo; Volver al Menú</a>
+        <div class="resource-display">Créditos: $<span id="money-count">0</span></div>
+    </header>
+    <main id="game-container">
+        <section id="left-panel">
+            <div class="panel">
+                <h2>Gestión de la Base</h2>
+                <div id="base-upgrades-list" class="upgrades-list"></div>
+            </div>
+            <!-- PANEL AÑADIDO -->
+            <div class="panel">
+                <h2>Registro de Combate</h2>
+                <div id="attack-log" class="log-list">
+                    <p>No hay actividad reciente.</p>
+                </div>
+            </div>
+        </section>
+        <section id="right-panel">
+            <div class="panel">
+                <h2>Conflictos Galácticos</h2>
+                <button id="attack-player-btn" class="action-btn">Atacar a un Piloto</button>
+            </div>
+            <div class="panel">
+                <h2>Alianzas</h2>
+                <div id="alliance-info">
+                    <p>No perteneces a ninguna alianza.</p>
+                    <div class="alliance-actions">
+                        <button id="create-alliance-btn" class="action-btn">Crear Alianza</button>
+                        <button id="join-alliance-btn" class="action-btn">Unirse a una Alianza</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <div id="attack-modal" class="modal-overlay hidden"><div class="modal-content"><button class="close-btn">&times;</button><h2>Seleccionar Objetivo</h2><div id="player-list-container"><p>Buscando pilotos...</p></div></div></div>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+    <script src="base.js"></script>
+</body>
+</html>
