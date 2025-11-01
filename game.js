@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    // TU CONFIGURACIÓN DE FIREBASE YA INTEGRADA
     const firebaseConfig = {
       apiKey: "AIzaSyB5XMrJtKg-EzP3Tea3-yllj-NZEoDXJlY",
       authDomain: "proyecto-genesis-f2425.firebaseapp.com",
@@ -13,11 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
 
+    // --- CONEXIÓN AL EMULADOR LOCAL ---
     if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
+        console.log("JUEGO: MODO DE PRUEBA LOCAL DETECTADO. CONECTANDO A EMULADORES...");
         auth.useEmulator("http://localhost:9099");
         db.useEmulator("localhost", 8080);
     }
 
+    // --- CONFIGURACIÓN DEL JUEGO ---
     const CONFIG = {
         MATERIALS: { Helium3: { name: "Helio-3", baseValue: 10 }, AsteroidOre: { name: "Mineral de Asteroide", baseValue: 25 }, IceCrystals: { name: "Cristales de Hielo", baseValue: 60 }, AlienArtifacts: { name: "Artefactos Alienígenas", baseValue: 250 } },
         PLANETS: { 
@@ -36,14 +40,24 @@ document.addEventListener('DOMContentLoaded', () => {
         ]
     };
     
+    // --- ESTADO Y DOM ---
     let gameState = {};
     let marketPrices = {};
     const moneyCountEl = document.getElementById('money-count'), planetNameEl = document.getElementById('planet-name'), inventoryListEl = document.getElementById('inventory-list'), modulesListEl = document.getElementById('modules-list'), upgradesListEl = document.getElementById('upgrades-list'), marketListEl = document.getElementById('market-list'), travelListEl = document.getElementById('travel-list'), loadingOverlay = document.getElementById('loading-overlay');
 
+    // --- SISTEMA DE GUARDADO ---
     let saveTimeout;
     function requestSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(saveGame, 2000); }
-    function saveGame() { const user = auth.currentUser; if (user && typeof gameState.money !== 'undefined') { db.collection('players').doc(user.uid).set(gameState, { merge: true }); const playerName = user.displayName || user.email.split('@')[0]; db.collection('leaderboard').doc(user.uid).set({ playerName: playerName, money: Math.floor(gameState.money) }, { merge: true }); } }
+    function saveGame() { 
+        const user = auth.currentUser;
+        if (user && typeof gameState.money !== 'undefined') {
+            db.collection('players').doc(user.uid).set(gameState, { merge: true });
+            const playerName = user.displayName || user.email.split('@')[0];
+            db.collection('leaderboard').doc(user.uid).set({ playerName: playerName, money: Math.floor(gameState.money) }, { merge: true });
+        }
+    }
 
+    // --- LÓGICA DE LA INTERFAZ (UI) ---
     function getDefaultState() { return { money: 100, currentPlanet: 'Terra', inventory: Object.keys(CONFIG.MATERIALS).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), upgradeLevels: Object.keys(CONFIG.UPGRADES).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), modules: [], unlockedPlanets: ['Terra'], lastLogin: null, achievedMissions: [], completedMissions: [] }; }
     
     function updateUI() {
@@ -57,15 +71,13 @@ document.addEventListener('DOMContentLoaded', () => {
         modulesListEl.innerHTML = gameState.modules.map(module => `<div class="resource-line module-item"><div class="module-info"><h4 class="item-rarity ${module.rarity}">${module.name}</h4><p>${module.description}</p></div></div>`).join('') || "<p>No hay módulos instalados.</p>";
     }
 
+    // --- ACCIONES DEL JUGADOR ---
     window.sellMaterial = (key, amount) => { let amountToSell = (amount === 'all') ? Math.floor(gameState.inventory[key]) : parseInt(amount, 10); if (gameState.inventory[key] >= amountToSell && amountToSell > 0) { const material = CONFIG.MATERIALS[key]; const modifier = marketPrices[gameState.currentPlanet][key]; let price = material.baseValue * modifier; gameState.modules.forEach(m => { if (m.effect.type === 'sell_all') price *= m.effect.value; }); gameState.inventory[key] -= amountToSell; gameState.money += price * amountToSell; requestSave(); } };
     window.buyUpgrade = (key) => { const upgrade = CONFIG.UPGRADES[key]; const cost = Math.ceil(upgrade.cost * Math.pow(1.15, gameState.upgradeLevels[key])); if (gameState.money >= cost) { gameState.money -= cost; gameState.upgradeLevels[key]++; requestSave(); } };
-    
     window.travelToPlanet = (key) => {
         if (gameState.currentPlanet === key) return;
         const isUnlocked = gameState.unlockedPlanets.includes(key);
-        if (isUnlocked) {
-            gameState.currentPlanet = key;
-            requestSave();
+        if (isUnlocked) { gameState.currentPlanet = key; requestSave();
         } else {
             const cost = CONFIG.PLANETS[key].travelCost;
             if (gameState.money >= cost) {
@@ -83,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // --- LÓGICA DEL JUEGO ---
     function checkForModuleDrop(materialKey) {
         if (materialKey !== 'AlienArtifacts') return;
         const SINGULARITY_CHANCE = 1 / 10000;
@@ -126,9 +139,29 @@ document.addEventListener('DOMContentLoaded', () => {
         updateUI();
     }
     
+    // --- LÓGICA DE INICIALIZACIÓN ROBUSTA ---
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            initializeGame();
+        } else {
+            window.location.href = 'menu.html';
+        }
+    });
+
+    async function initializeGame() {
+        loadingOverlay.classList.remove('hidden');
+        await loadGame();
+        await loadInitialMarketPrices();
+        setInterval(gameLoop, 100);
+        setInterval(requestSave, 15000);
+        window.addEventListener('beforeunload', saveGame);
+        listenForMarketUpdates();
+        loadingOverlay.classList.add('hidden');
+    }
+
     async function loadGame() {
         const user = auth.currentUser;
-        if (!user) { gameState = getDefaultState(); loadingOverlay.classList.add('hidden'); return; }
+        if (!user) { gameState = getDefaultState(); return; }
         const docRef = db.collection('players').doc(user.uid);
         const doc = await docRef.get();
         gameState = doc.exists ? { ...getDefaultState(), ...doc.data() } : getDefaultState();
@@ -136,34 +169,34 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!gameState.unlockedPlanets) gameState.unlockedPlanets = ['Terra'];
         if (!gameState.achievedMissions) gameState.achievedMissions = [];
         if (!gameState.completedMissions) gameState.completedMissions = [];
-        loadingOverlay.classList.add('hidden');
     }
 
-    // --- BLOQUE DE CÓDIGO CORREGIDO ---
-    db.collection('marketState').doc('globalPrices').onSnapshot((doc) => {
-        if (doc.exists) {
-            marketPrices = doc.data();
-            console.log("Precios del mercado actualizados en tiempo real.");
-        } else {
-            console.log("Documento de precios no encontrado. Usando precios base por defecto.");
-            // Crea un objeto de precios base si el documento no existe
+    async function loadInitialMarketPrices() {
+        try {
+            const doc = await db.collection('marketState').doc('globalPrices').get();
+            if (doc.exists) {
+                marketPrices = doc.data();
+            } else {
+                throw new Error("El documento de precios no existe.");
+            }
+        } catch (error) {
+            console.warn("No se pudieron cargar precios del servidor. Usando precios base por defecto.", error);
             const defaultPrices = {};
             for (const planetKey in CONFIG.PLANETS) {
                 defaultPrices[planetKey] = {};
                 for (const materialKey in CONFIG.MATERIALS) {
-                    defaultPrices[planetKey][materialKey] = 1.0; // Precio base (sin modificación)
+                    defaultPrices[planetKey][materialKey] = 1.0;
                 }
             }
             marketPrices = defaultPrices;
         }
-    });
+    }
 
-    auth.onAuthStateChanged(user => {
-        if (user) { loadGame(); } 
-        else { window.location.href = 'menu.html'; }
-    });
-
-    setInterval(gameLoop, 100);
-    setInterval(requestSave, 15000);
-    window.addEventListener('beforeunload', saveGame);
+    function listenForMarketUpdates() {
+        db.collection('marketState').doc('globalPrices').onSnapshot((doc) => {
+            if (doc.exists) {
+                marketPrices = doc.data();
+            }
+        });
+    }
 });
