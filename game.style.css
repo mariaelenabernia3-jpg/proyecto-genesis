@@ -12,6 +12,9 @@ body { margin: 0; font-family: var(--primary-font); background-color: var(--back
 #game-container { display: grid; grid-template-columns: 1fr 1fr; height: calc(100vh - 66px); gap: 20px; padding: 20px; }
 #left-panel, #right-panel { display: flex; flex-direction: column; gap: 20px; min-height: 0; }
 .panel { background: rgba(255, 255, 255, 0.05); border: 1px solid #333; padding: 20px; display: flex; flex-direction: column; overflow: hidden; }
+/* CORRECCIÓN: Hace que los paneles dentro de la columna izquierda se distribuyan correctamente */
+#left-panel .panel { flex: 1 1 0; }
+
 .panel h2 { margin: 0 0 20px; text-align: center; color: var(--accent-glow); text-transform: uppercase; flex-shrink: 0; }
 .resource-list, .upgrades-list, .travel-list { overflow-y: auto; flex-grow: 1; }
 .resource-line { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; }

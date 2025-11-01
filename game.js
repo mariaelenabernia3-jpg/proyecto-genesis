@@ -85,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function checkForModuleDrop(materialKey) {
         if (materialKey !== 'AlienArtifacts') return;
-        
         const SINGULARITY_CHANCE = 1 / 10000;
         if (Math.random() < SINGULARITY_CHANCE) {
             const singularityCore = CONFIG.MODULES.find(m => m.id === 's01');
@@ -95,7 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
             requestSave();
             return;
         }
-        
         const dropChance = 1 / 500;
         if (Math.random() < dropChance) {
             const regularModules = CONFIG.MODULES.filter(m => m.id !== 's01');
@@ -130,17 +128,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function gameLoop() {
         const production = calculateProduction();
-        let artifactProduction = production['AlienArtifacts'] / 10;
-        if(artifactProduction > 0){
-             // Por cada artefacto generado (o fracción), hay una posibilidad de encontrar un módulo
-            for(let i = 0; i < Math.floor(artifactProduction); i++){
+        let artifactProductionPerTick = (production['AlienArtifacts'] || 0) / 10;
+        if(artifactProductionPerTick > 0){
+            for(let i = 0; i < Math.floor(artifactProductionPerTick); i++){
                 checkForModuleDrop('AlienArtifacts');
             }
-             if(Math.random() < (artifactProduction - Math.floor(artifactProduction))){
+             if(Math.random() < (artifactProductionPerTick - Math.floor(artifactProductionPerTick))){
                 checkForModuleDrop('AlienArtifacts');
             }
         }
-
         for (const material in production) {
             gameState.inventory[material] += production[material] / 10;
         }
@@ -165,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
             marketPrices = doc.data();
             console.log("Precios del mercado actualizados en tiempo real.");
         } else {
-            console.log("No se encontraron precios de mercado. Desplegando Cloud Function...");
+            console.log("No se encontraron precios de mercado. Asegúrate de haber desplegado la Cloud Function.");
         }
     });
 
