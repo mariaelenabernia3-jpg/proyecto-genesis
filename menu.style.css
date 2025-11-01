@@ -1,4 +1,4 @@
-:root { --primary-font: 'Orbitron', sans-serif; --text-color: #e0e0e0; --accent-glow: #00ffff; --background-dark: #0a0a0c; }
+:root { --primary-font: 'Orbitron', sans-serif; --text-color: #e0e0e0; --accent-glow: #00ffff; --background-dark: #0a0a0c; --accent-sell: #2ecc71; --accent-buy: #f1c40f;}
 body { margin: 0; font-family: var(--primary-font); background-color: var(--background-dark); color: var(--text-color); overflow: hidden; cursor: default; }
 #video-bg { position: fixed; top: 50%; left: 50%; min-width: 100%; min-height: 100%; width: auto; height: auto; transform: translateX(-50%) translateY(-50%); z-index: -3; filter: brightness(0.3) blur(2px); }
 #vignette-overlay, #scanlines-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -17,7 +17,7 @@ body { margin: 0; font-family: var(--primary-font); background-color: var(--back
 @keyframes typing { from { width: 0 } to { width: 100% } }
 @keyframes blink-caret { from, to { border-color: transparent } 50% { border-color: var(--accent-glow); } }
 .main-nav { display: flex; flex-direction: column; }
-.nav-button { display: flex; align-items: center; font-size: clamp(1.2rem, 2.5vw, 1.5rem); color: var(--text-color); text-decoration: none; text-transform: uppercase; letter-spacing: 2px; padding: 20px 30px; margin: 10px 0; border: 1px solid transparent; position: relative; overflow: hidden; transition: color 0.4s ease-out; }
+.nav-button { display: flex; align-items: center; font-size: clamp(1.2rem, 2.5vw, 1.5rem); color: var(--text-color); text-decoration: none; text-transform: uppercase; letter-spacing: 2px; padding: 20px 30px; margin: 5px 0; border: 1px solid transparent; position: relative; overflow: hidden; transition: color 0.4s ease-out; }
 .nav-button:before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: var(--accent-glow); z-index: -1; transition: left 0.4s ease-out; }
 .nav-button:hover:before { left: 0; }
 .nav-button:hover { color: #000; }
@@ -82,9 +82,9 @@ body { margin: 0; font-family: var(--primary-font); background-color: var(--back
 .market-sell-form { display: flex; gap: 10px; align-items: center; }
 .market-sell-form input { width: 100px; }
 #missions-list { max-height: 60vh; overflow-y: auto; font-family: sans-serif; }
-.mission-item { background: rgba(0,0,0,0.2); border: 1px solid #444; padding: 20px; margin-bottom: 15px; border-radius: 5px; border-left: 5px solid #444; }
+.mission-item { background: rgba(0,0,0,0.2); border: 1px solid #444; padding: 20px; margin-bottom: 15px; border-radius: 5px; border-left: 5px solid #444; transition: all 0.3s ease; }
 .mission-item.achieved { border-left-color: var(--accent-glow); }
-.mission-item.claimed { border-left-color: var(--accent-sell); opacity: 0.7; }
+.mission-item.claimed { border-left-color: var(--accent-sell); opacity: 0.6; }
 .mission-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .mission-title { font-family: var(--primary-font); font-size: 1.2rem; margin: 0; }
 .mission-reward { font-weight: bold; color: var(--accent-buy); }
@@ -94,4 +94,4 @@ body { margin: 0; font-family: var(--primary-font); background-color: var(--back
 .progress-text { font-size: 0.8rem; text-align: right; color: #888; margin-bottom: 15px; }
 .claim-btn { width: 100%; padding: 10px; font-size: 1rem; background-color: var(--accent-buy); }
 .claim-btn.claimed-style { background-color: var(--accent-sell); }
-@media (max-width: 768px) { #menu-container { padding: 0 20px; width: 100%; box-sizing: border-box; } .game-title { letter-spacing: 3px; } .nav-button { padding: 15px 20px; } .nav-button .icon { width: 24px; height: 24px; } #user-panel { top: 15px; right: 15px; } .modal-content { padding: 25px; } }
+@media (max-width: 768px) { #menu-container { padding: 0 20px; width: 100%; box-sizing: border-box; } .game-title { letter-spacing: 3px; } .nav-button { padding: 15px 20px; } .nav-button .icon { width: 24px; height: 24px; } #user-panel { top: 15px; right: 15px; } .modal-content { padding: 25px; } .market-item { grid-template-columns: 1fr; text-align: center; } .market-item > * { justify-self: center; } }
