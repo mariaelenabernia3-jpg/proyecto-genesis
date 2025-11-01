@@ -58,29 +58,4 @@ input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; background: v
 .leaderboard-table .score { width: 30%; text-align: right; font-weight: bold; }
 .leaderboard-table .current-player-row { background-color: var(--accent-glow) !important; color: var(--background-dark) !important; font-weight: bold; }
 .error-message { color: #ff6b6b; background-color: rgba(255, 107, 107, 0.1); border: 1px solid #ff6b6b; padding: 10px; margin: -10px 0 15px 0; border-radius: 5px; font-size: 0.9rem; font-family: sans-serif; text-align: center; display: none; }
-
-/* --- SECCIÓN RESPONSIVA PARA MÓVILES --- */
-@media (max-width: 768px) {
-    #menu-container {
-        padding: 0 20px; /* Menos padding lateral */
-        width: 100%;
-        box-sizing: border-box;
-    }
-    .game-title {
-        letter-spacing: 3px;
-    }
-    .nav-button {
-        padding: 15px 20px; /* Botones menos altos */
-    }
-    .nav-button .icon {
-        width: 24px;
-        height: 24px;
-    }
-    #user-panel {
-        top: 15px;
-        right: 15px;
-    }
-    .modal-content {
-        padding: 25px; /* Menos padding en los modales */
-    }
-}
+@media (max-width: 768px) { #menu-container { padding: 0 20px; width: 100%; box-sizing: border-box; } .game-title { letter-spacing: 3px; } .nav-button { padding: 15px 20px; } .nav-button .icon { width: 24px; height: 24px; } #user-panel { top: 15px; right: 15px; } .modal-content { padding: 25px; } }
