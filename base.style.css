@@ -10,8 +10,8 @@ body { margin: 0; font-family: var(--primary-font); background-color: var(--back
 #game-container { display: grid; grid-template-columns: 1fr 1fr; height: calc(100vh - 66px); gap: 20px; padding: 20px; }
 #left-panel, #right-panel { display: flex; flex-direction: column; gap: 20px; min-height: 0; }
 .panel { background: rgba(255, 255, 255, 0.05); border: 1px solid #333; padding: 20px; display: flex; flex-direction: column; overflow: hidden; flex: 1 1 0; }
-.panel h2 { margin: 0 0 20px; text-align: center; color: var(--accent-glow); text-transform: uppercase; }
-.upgrades-list, .log-list { overflow-y: auto; }
+.panel h2, .panel h3 { margin: 0 0 20px; text-align: center; color: var(--accent-glow); text-transform: uppercase; }
+.upgrades-list, .log-list, .alliance-members { overflow-y: auto; }
 .upgrade-line { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #222; }
 .upgrade-line span { font-size: 1.1rem; }
 .upgrade-btn { background-color: var(--accent-buy); font-family: var(--primary-font); color: #000; border: none; padding: 8px 15px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; font-weight: bold; }
@@ -19,13 +19,13 @@ body { margin: 0; font-family: var(--primary-font); background-color: var(--back
 .upgrade-btn.disabled { background-color: #555 !important; color: #999 !important; cursor: not-allowed !important; box-shadow: none !important; }
 .action-btn { width: 100%; padding: 15px; font-size: 1.2rem; background-color: var(--accent-danger); color: white; border: none; cursor: pointer; transition: all 0.3s; text-transform: uppercase; font-weight: bold; font-family: var(--primary-font); }
 .action-btn:hover { background-color: white; color: #000; box-shadow: 0 0 15px var(--accent-danger); }
-#alliance-info { text-align: center; }
 .alliance-actions { display: flex; gap: 10px; margin-top: 20px; }
 .alliance-actions .action-btn { background-color: var(--accent-glow); }
 .alliance-actions .action-btn:hover { box-shadow: 0 0 15px var(--accent-glow); }
 .log-list .log-item { padding: 8px 5px; border-bottom: 1px solid #222; font-family: sans-serif; font-size: 0.9rem; line-height: 1.4; }
 .log-item.win { color: var(--accent-win); }
 .log-item.loss { color: var(--accent-loss); }
+.alliance-members li { list-style: none; padding: 5px 0; border-bottom: 1px solid #222; }
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 200; backdrop-filter: blur(5px); }
 .modal-content { background: var(--background-dark); border: 1px solid var(--accent-glow); padding: 30px; max-width: 500px; width: 90%; }
 .close-btn { float: right; font-size: 1.5rem; background: none; border: none; color: white; cursor: pointer; }

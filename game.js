@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    // TU CONFIGURACIÓN DE FIREBASE YA INTEGRADA
     const firebaseConfig = {
       apiKey: "AIzaSyB5XMrJtKg-EzP3Tea3-yllj-NZEoDXJlY",
       authDomain: "proyecto-genesis-f2425.firebaseapp.com",
@@ -13,11 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
 
+    // --- CONEXIÓN AL EMULADOR LOCAL ---
     if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
+        console.log("JUEGO: MODO DE PRUEBA LOCAL DETECTADO. CONECTANDO A EMULADORES...");
         auth.useEmulator("http://localhost:9099");
         db.useEmulator("localhost", 8080);
     }
 
+    // --- CONFIGURACIÓN DEL JUEGO (REEQUILIBRADA) ---
     const CONFIG = {
         MATERIALS: { 
             Helium3: { name: "Helio-3", baseValue: 5 },
@@ -46,15 +50,36 @@ document.addEventListener('DOMContentLoaded', () => {
         ]
     };
     
+    // --- ESTADO Y DOM ---
     let gameState = {};
     let marketPrices = {};
     const moneyCountEl = document.getElementById('money-count'), planetNameEl = document.getElementById('planet-name'), inventoryListEl = document.getElementById('inventory-list'), modulesListEl = document.getElementById('modules-list'), upgradesListEl = document.getElementById('upgrades-list'), marketListEl = document.getElementById('market-list'), travelListEl = document.getElementById('travel-list'), loadingOverlay = document.getElementById('loading-overlay');
 
+    // --- SISTEMA DE GUARDADO ---
     let saveTimeout;
     function requestSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(saveGame, 2000); }
-    function saveGame() { const user = auth.currentUser; if (user && typeof gameState.money !== 'undefined') { db.collection('players').doc(user.uid).set(gameState, { merge: true }); const playerName = user.displayName || user.email.split('@')[0]; db.collection('leaderboard').doc(user.uid).set({ playerName: playerName, money: Math.floor(gameState.money) }, { merge: true }); } }
+    function saveGame() { 
+        const user = auth.currentUser;
+        if (user && typeof gameState.money !== 'undefined') {
+            db.collection('players').doc(user.uid).set(gameState, { merge: true });
+            const playerName = user.displayName || user.email.split('@')[0];
+            db.collection('leaderboard').doc(user.uid).set({ playerName: playerName, money: Math.floor(gameState.money) }, { merge: true });
+        }
+    }
 
-    function getDefaultState() { return { money: 100, currentPlanet: 'Terra', inventory: Object.keys(CONFIG.MATERIALS).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), upgradeLevels: Object.keys(CONFIG.UPGRADES).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), modules: [], unlockedPlanets: ['Terra'], lastLogin: null, achievedMissions: [], completedMissions: [] }; }
+    // --- LÓGICA DE LA INTERFAZ (UI) ---
+    function getDefaultState() { 
+        return { 
+            money: 100, currentPlanet: 'Terra', 
+            inventory: Object.keys(CONFIG.MATERIALS).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), 
+            upgradeLevels: Object.keys(CONFIG.UPGRADES).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), 
+            modules: [], unlockedPlanets: ['Terra'], lastLogin: null, 
+            achievedMissions: [], completedMissions: [],
+            baseLevels: { Defenses: 0, Attacks: 0 },
+            notifications: [],
+            alliance: null 
+        }; 
+    }
     
     function updateUI() {
         if (typeof gameState.money === 'undefined' || Object.keys(marketPrices).length === 0) return;
@@ -67,9 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
         modulesListEl.innerHTML = gameState.modules.map(module => `<div class="resource-line module-item"><div class="module-info"><h4 class="item-rarity ${module.rarity}">${module.name}</h4><p>${module.description}</p></div></div>`).join('') || "<p>No hay módulos instalados.</p>";
     }
 
+    // --- ACCIONES DEL JUGADOR ---
     window.sellMaterial = (key, amount) => { let amountToSell = (amount === 'all') ? Math.floor(gameState.inventory[key]) : parseInt(amount, 10); if (gameState.inventory[key] >= amountToSell && amountToSell > 0) { const material = CONFIG.MATERIALS[key]; const modifier = marketPrices[gameState.currentPlanet][key]; let price = material.baseValue * modifier; gameState.modules.forEach(m => { if (m.effect.type === 'sell_all') price *= m.effect.value; }); gameState.inventory[key] -= amountToSell; gameState.money += price * amountToSell; requestSave(); } };
     window.buyUpgrade = (key) => { const upgrade = CONFIG.UPGRADES[key]; const cost = Math.ceil(upgrade.cost * Math.pow(1.15, gameState.upgradeLevels[key])); if (gameState.money >= cost) { gameState.money -= cost; gameState.upgradeLevels[key]++; requestSave(); } };
-    
     window.travelToPlanet = (key) => {
         if (gameState.currentPlanet === key) return;
         const isUnlocked = gameState.unlockedPlanets.includes(key);
@@ -91,6 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // --- LÓGICA DEL JUEGO ---
     function checkForModuleDrop(materialKey) {
         if (materialKey !== 'AlienArtifacts') return;
         const SINGULARITY_CHANCE = 1 / 10000;
@@ -115,18 +141,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function calculateProduction() {
         const production = {};
-        for (const key in CONFIG.UPGRADES) { const upgrade = CONFIG.UPGRADES[key]; const level = gameState.upgradeLevels[key]; if (level > 0) { for (const material in upgrade.baseProd) { production[material] = (production[material] || 0) + (upgrade.baseProd[material] * level); } } }
-        gameState.modules.forEach(module => { if (module.effect.type === 'prod_all') { for (const mat in production) { production[mat] *= module.effect.value; } } else if (module.effect.type === 'prod_single') { if (production[module.effect.material]) { production[module.effect.material] *= module.effect.value; } } });
+        for (const key in CONFIG.UPGRADES) { const upgrade = CONFIG.UPGRADES[key]; const level = gameState.upgradeLevels[key] || 0; if (level > 0) { for (const material in upgrade.baseProd) { production[material] = (production[material] || 0) + (upgrade.baseProd[material] * level); } } }
+        (gameState.modules || []).forEach(module => { if (module.effect.type === 'prod_all') { for (const mat in production) { production[mat] *= module.effect.value; } } else if (module.effect.type === 'prod_single') { if (production[module.effect.material]) { production[module.effect.material] *= module.effect.value; } } });
         return production;
     }
 
     function gameLoop() {
         const production = calculateProduction();
         let artifactProductionPerTick = (production['AlienArtifacts'] || 0) / 10;
-        if(artifactProductionPerTick > 0){
-             if(Math.random() < artifactProductionPerTick){
-                checkForModuleDrop('AlienArtifacts');
-            }
+        if(artifactProductionPerTick > 0 && Math.random() < artifactProductionPerTick){
+            checkForModuleDrop('AlienArtifacts');
         }
         for (const material in production) {
             gameState.inventory[material] += production[material] / 10;
@@ -134,6 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateUI();
     }
     
+    // --- LÓGICA DE INICIALIZACIÓN ---
     auth.onAuthStateChanged(user => {
         if (user) {
             initializeGame();
@@ -159,10 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const docRef = db.collection('players').doc(user.uid);
         const doc = await docRef.get();
         gameState = doc.exists ? { ...getDefaultState(), ...doc.data() } : getDefaultState();
-        if (!gameState.modules) gameState.modules = [];
-        if (!gameState.unlockedPlanets) gameState.unlockedPlanets = ['Terra'];
-        if (!gameState.achievedMissions) gameState.achievedMissions = [];
-        if (!gameState.completedMissions) gameState.completedMissions = [];
     }
 
     async function loadInitialMarketPrices() {
