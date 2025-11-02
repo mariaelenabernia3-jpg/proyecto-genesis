@@ -1,3 +1,4 @@
+
 :root { --primary-font: 'Orbitron', sans-serif; --text-color: #e0e0e0; --accent-glow: #00ffff; --accent-danger: #ff4d4d; --accent-buy: #f1c40f; --background-dark: #0a0a0c; --accent-win: #2ecc71; --accent-loss: #e74c3c; }
 body { margin: 0; font-family: var(--primary-font); background-color: var(--background-dark); color: var(--text-color); overflow: hidden; opacity: 0; animation: fadeIn 1s forwards; }
 @keyframes fadeIn { to { opacity: 1; } }
@@ -42,4 +43,4 @@ body { margin: 0; font-family: var(--primary-font); background-color: var(--back
 ::-webkit-scrollbar-track { background: #111; }
 ::-webkit-scrollbar-thumb { background: var(--accent-glow); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #fff; }
-@media (max-width: 768px) { #game-container { grid-template-columns: 1fr; overflow-y: auto; height: auto; } .panel { padding: 15px; } .alliance-actions { flex-direction: column; } }
+@media (max-width: 768px) { #game-container { grid-template-columns: 1fr; overflow-y: auto; height: auto; } .panel { padding: 15px; } .alliance-actions { flex-direction: column; } #game-header { flex-direction: column; gap: 10px; padding: 15px; } .resource-display { font-size: 1.1rem; } }
