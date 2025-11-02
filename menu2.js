@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- SELECTORES ---
     const loadingOverlay = document.getElementById('loading-overlay');
-    const patrolMenuContainer = document.getElementById('patrol-menu-container');
     const patrolMenuView = document.getElementById('patrol-menu-view');
     const startPatrolBtn = document.getElementById('start-patrol-btn');
     const hangarBtn = document.getElementById('hangar-btn');
@@ -70,7 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 level: { speed: 1, fireRate: 1, damage: 1, maxHealth: 1 }
             },
             pieces: 0,
-            components: 0
+            components: 0,
+            baseLevels: { Attacks: 0, Defenses: 0 }
         }, { merge: true }); // Merge es CRUCIAL para no borrar otros datos del jugador
     }
 
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.upgradeShipStat = async (stat, cost) => {
-        await fetchPlayerData(); // Asegura tener los datos más recientes
+        await fetchPlayerData();
         if (playerData.money >= cost) {
             const ship = playerData.patrolShip;
             const updates = {
@@ -149,17 +149,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- LÓGICA DEL JUEGO DE PATRULLAJE ---
+    // --- LÓGICA DEL JUEGO DE PATRULLAJE (REDISEÑADA) ---
     const canvas = document.getElementById('patrol-game-canvas');
     const ctx = canvas.getContext('2d');
-    let player, enemies, bullets, frameCount, piecesCollected, gameLoopId;
+    let player, enemies, bullets, enemyBullets, frameCount, piecesCollected, enemyLevel, gameLoopId;
 
-    startPatrolBtn.addEventListener('click', () => {
-        gameplayOverlay.classList.remove('hidden');
-        initPatrolGame();
-    });
-
-    document.getElementById('exit-patrol-btn').addEventListener('click', gameOver);
+    startPatrolBtn.addEventListener('click', () => { gameplayOverlay.classList.remove('hidden'); initPatrolGame(); });
+    document.getElementById('exit-patrol-btn').addEventListener('click', () => gameOver(false));
 
     function initPatrolGame() {
         canvas.width = window.innerWidth;
@@ -167,8 +163,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const shipStats = playerData.patrolShip;
 
         player = {
-            x: canvas.width / 2 - 25, y: canvas.height - 80, width: 50, height: 30, speed: shipStats.speed,
-            fireRate: shipStats.fireRate, damage: shipStats.damage, maxHealth: shipStats.maxHealth, currentHealth: shipStats.maxHealth,
+            x: canvas.width / 2 - 25, y: canvas.height - 80, width: 50, height: 30,
+            fireRate: shipStats.fireRate, damage: shipStats.damage,
             targetX: canvas.width / 2 - 25,
             draw() {
                 ctx.fillStyle = '#00ffff'; ctx.shadowBlur = 10; ctx.shadowColor = '#00ffff';
@@ -180,68 +176,97 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             update() { this.x += (this.targetX - this.x) * 0.1; } // Movimiento suave
         };
-        bullets = []; enemies = []; frameCount = 0; piecesCollected = 0;
-        if (window.enemySpawnInterval) clearInterval(window.enemySpawnInterval);
-        window.enemySpawnInterval = setInterval(spawnEnemy, 1500);
+        bullets = []; enemyBullets = []; enemies = [];
+        frameCount = 0; piecesCollected = 0; enemyLevel = 1;
+        gameLoopId = null;
+
         gameLoop();
     }
     
     function gameLoop() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         frameCount++;
+
+        if (enemies.length === 0) spawnEnemy();
+
         player.update();
         player.draw();
+
         if (frameCount % player.fireRate === 0) { bullets.push({ x: player.x + player.width / 2 - 2.5, y: player.y, width: 5, height: 15, speed: 7 }); }
         
-        for (let i = bullets.length - 1; i >= 0; i--) { let b = bullets[i]; b.y -= b.speed; ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x, b.y, b.width, b.height); if (b.y < 0) bullets.splice(i, 1); }
+        // Actualizar y dibujar balas
+        bullets.forEach((b, i) => { b.y -= b.speed; ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x, b.y, b.width, b.height); if (b.y < 0) bullets.splice(i, 1); });
+        enemyBullets.forEach((b, i) => { b.y += b.speed; ctx.fillStyle = '#f96666'; ctx.fillRect(b.x, b.y, b.width, b.height); if (b.y > canvas.height) enemyBullets.splice(i, 1); });
 
-        for (let i = enemies.length - 1; i >= 0; i--) {
-            let e = enemies[i]; e.y += e.speed;
+        // Actualizar y dibujar enemigos
+        enemies.forEach((e, i) => {
+            e.x += e.speedX * e.direction;
+            if (e.x <= 0 || e.x + e.width >= canvas.width) e.direction *= -1;
             ctx.fillStyle = '#ff4d4d'; ctx.fillRect(e.x, e.y, e.width, e.height);
-            if (e.y > canvas.height) { enemies.splice(i, 1); continue; }
-            if (e.x < player.x + player.width && e.x + e.width > player.x && e.y < player.y + player.height && e.y + e.height > player.y) {
-                enemies.splice(i, 1); player.currentHealth -= 20;
-                if (player.currentHealth <= 0) { gameOver(); return; }
-                continue;
+            
+            if (frameCount % e.fireRate === 0) {
+                enemyBullets.push({ x: e.x + e.width / 2 - 3, y: e.y + e.height, width: 6, height: 12, speed: e.bulletSpeed });
             }
+
             for (let j = bullets.length - 1; j >= 0; j--) {
-                let b = bullets[j];
-                if (b.x < e.x + e.width && b.x + b.width > e.x && b.y < e.y + e.height && b.y + b.height > e.y) {
-                    bullets.splice(j, 1); e.health -= player.damage;
-                    if (e.health <= 0) { enemies.splice(i, 1); piecesCollected += Math.floor(Math.random() * 3) + 1; }
+                if (bullets[j].x < e.x + e.width && bullets[j].x + bullets[j].width > e.x && bullets[j].y < e.y + e.height && bullets[j].y + bullets[j].height > e.y) {
+                    bullets.splice(j, 1);
+                    e.health -= player.damage;
+                    if (e.health <= 0) {
+                        enemies.splice(i, 1);
+                        piecesCollected += Math.floor(Math.random() * 2) + enemyLevel;
+                        enemyLevel++;
+                    }
                     break;
                 }
             }
+        });
+
+        // Detectar colisión bala enemiga con jugador
+        for (let i = enemyBullets.length - 1; i >= 0; i--) {
+            let b = enemyBullets[i];
+            if (b.x < player.x + player.width && b.x + b.width > player.x && b.y < player.y + player.height && b.y + b.height > player.y) {
+                gameOver(true); // El jugador fue derribado
+                return; // Detiene el bucle actual
+            }
         }
+        
         updateHUD();
         gameLoopId = requestAnimationFrame(gameLoop);
     }
 
     function spawnEnemy() {
-        const size = 35;
-        const x = Math.random() * (canvas.width - size);
-        enemies.push({ x, y: -size, width: size, height: size, speed: 1 + Math.random() * 2, health: 3 });
+        const health = 3 + Math.floor(enemyLevel * 1.5);
+        const speedX = 1 + enemyLevel * 0.15;
+        const fireRate = Math.max(20, 60 - enemyLevel * 2);
+        const bulletSpeed = 3 + enemyLevel * 0.25;
+        enemies.push({ x: canvas.width / 2 - 25, y: 50, width: 50, height: 30, health, speedX, direction: 1, fireRate, bulletSpeed });
     }
 
     function updateHUD() {
-        document.getElementById('hud-health').querySelector('span').textContent = `${Math.max(0, player.currentHealth)}/${player.maxHealth}`;
+        document.getElementById('hud-health').style.display = 'none'; // La vida ya no es relevante
         document.getElementById('hud-pieces').querySelector('span').textContent = piecesCollected;
     }
 
-    async function gameOver() {
-        clearInterval(window.enemySpawnInterval);
-        if(gameLoopId) cancelAnimationFrame(gameLoopId);
+    async function gameOver(wasKilled) {
+        if (!gameLoopId) return; // Prevenir múltiples llamadas
+        cancelAnimationFrame(gameLoopId);
+        gameLoopId = null;
+        
         gameplayOverlay.classList.add('hidden');
         
         if (piecesCollected > 0) {
             await db.collection('players').doc(auth.currentUser.uid).update({
                 pieces: firebase.firestore.FieldValue.increment(piecesCollected)
             });
-            alert(`Patrullaje finalizado. Has recolectado ${piecesCollected} piezas.`);
+            if(wasKilled) alert(`¡Has sido derribado! Recolectaste ${piecesCollected} piezas.`);
+            else alert(`Patrullaje abandonado. Aseguraste ${piecesCollected} piezas.`);
         } else {
-            alert("Patrullaje finalizado. No se recolectaron piezas.");
+            if (wasKilled) alert("¡Has sido derribado! No recolectaste ninguna pieza.");
+            else alert("Patrullaje abandonado.");
         }
         await fetchPlayerData();
+        showView(patrolMenuView);
     }
 
     // --- CONTROLES (MOUSE Y TÁCTIL) ---
