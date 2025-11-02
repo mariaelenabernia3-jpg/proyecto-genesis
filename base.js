@@ -138,8 +138,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const notification = { id: `notif_${Date.now()}`, read: false, timestamp: new Date().toISOString() };
 
             if (attackRoll > defenseRoll) {
-                const maxLoot = defenderData.money * 0.10;
-                const loot = Math.floor(Math.random() * maxLoot);
+                // --- CAMBIO INICIA: LÓGICA DE BOTÍN MEJORADA ---
+                const powerRatio = defenseRoll > 0 ? attackRoll / defenseRoll : 5; // Si el defensor no tiene defensa, el ratio es alto.
+                
+                // El botín base es 2% y aumenta con el ratio de poder, con un máximo de 15%.
+                let lootPercentage = 0.02 + ((powerRatio - 1) * 0.01);
+                lootPercentage = Math.min(0.15, lootPercentage); // Se asegura que el máximo sea 15%
+                
+                const loot = Math.floor(defenderData.money * lootPercentage);
+                // --- CAMBIO TERMINA ---
                 
                 const PVP_LEGENDARY_CHANCE = 1 / 1000;
                 let newModule = null;
