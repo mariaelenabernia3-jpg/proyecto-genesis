@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Iniciar la carga
     playerImg.src = 'assets/nave.png';
     enemyImg.src = 'assets/Enemy.png';
-    backgroundImg.src = 'assets/fondo1.jpg';
+    backgroundImg.src = 'assets/fondo1.png';
 
 
     // --- AUTENTICACIÓN Y CARGA DE DATOS ---
@@ -306,4 +306,5 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         if (player && e.touches.length > 0) player.targetX = e.touches[0].clientX - player.width / 2;
     }, { passive: false });
+
 });
