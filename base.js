@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         db.useEmulator("localhost", 8080);
     }
 
+    // ===== CONFIGURACIÓN DE UNIDADES DE COMBATE =====
     const BASE_CONFIG = {
         DEFENSES: { cost: 1000, power: 10 },
         UNITS: {
@@ -43,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const allianceChatContainer = document.getElementById('alliance-chat-container');
     const playerSearchInput = document.getElementById('player-search-input');
     const clearReportsBtn = document.getElementById('clear-reports-btn');
-    // ===== CORRECCIÓN CRÍTICA AQUÍ: El selector que faltaba ha sido añadido =====
     const allianceChatForm = document.getElementById('alliance-chat-form');
 
     function updateUI() {
@@ -206,22 +206,30 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function setupAllianceChatListener() {
-        if (allianceChatUnsubscribe) return;
+        if (allianceChatUnsubscribe) return; 
         if (!gameState.alliance) return;
 
+        const chatBox = document.getElementById('alliance-chat-box');
+        chatBox.innerHTML = ''; 
+
         const chatQuery = db.collection('alliances').doc(gameState.alliance).collection('chat').orderBy('timestamp', 'asc').limitToLast(50);
+        
         allianceChatUnsubscribe = chatQuery.onSnapshot(snapshot => {
-            const chatBox = document.getElementById('alliance-chat-box');
-            chatBox.innerHTML = '';
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                const msgEl = document.createElement('div');
-                msgEl.classList.add('chat-message');
-                const time = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-                msgEl.innerHTML = `<div class="message-header"><span class="message-sender">${data.senderName}</span><span class="message-time">${time}</span></div><p class="message-content">${data.message}</p>`;
-                chatBox.appendChild(msgEl);
+            snapshot.docChanges().forEach(change => {
+                if (change.type === 'added') {
+                    const data = change.doc.data();
+                    const msgEl = document.createElement('div');
+                    msgEl.classList.add('chat-message');
+                    const time = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Enviando...';
+                    
+                    msgEl.innerHTML = `<div class="message-header"><span class="message-sender">${data.senderName}</span><span class="message-time">${time}</span></div><p class="message-content">${data.message}</p>`;
+                    
+                    chatBox.appendChild(msgEl);
+                }
             });
+
             setTimeout(() => { chatBox.scrollTop = chatBox.scrollHeight; }, 0);
+
         }, error => {
             console.error("Error en el listener del chat:", error);
         });
@@ -231,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const input = document.getElementById('chat-message-input');
         const message = input.value.trim();
-        if (message && gameState.alliance) {
+        if (message && gameState.alliance && currentUser) {
             db.collection('alliances').doc(gameState.alliance).collection('chat').add({
                 senderName: currentUser.displayName,
                 senderId: currentUser.uid,
@@ -241,6 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 input.value = '';
             }).catch(error => {
                 console.error("Error al enviar mensaje:", error);
+                alert("No se pudo enviar el mensaje. Revisa tu conexión y las reglas de Firebase.");
             });
         }
     });
