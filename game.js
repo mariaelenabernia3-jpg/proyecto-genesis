@@ -43,21 +43,27 @@ document.addEventListener('DOMContentLoaded', () => {
             Scanners: { name: "Escáneres de Largo Alcance", cost: 5000, baseProd: { AlienArtifacts: 0.01 } }
         },
         MODULES: [
+            // Comunes
             { id: 'c01', name: 'Micro-Condensador', description: '+3% a las ganancias por ventas.', rarity: 'common', effect: { type: 'sell_all', value: 1.03 } },
             { id: 'c02', name: 'Algoritmo de Minería Simple', description: '+2% a la producción de todos los materiales.', rarity: 'common', effect: { type: 'prod_all', value: 1.02 } },
+            // No Comunes
             { id: 'u01', name: 'Optimizador de Carga', description: '+7% a la producción de todos los materiales.', rarity: 'uncommon', effect: { type: 'prod_all', value: 1.07 } },
             { id: 'u02', name: 'Enfriador de Taladro Básico', description: '+15% a la producción de Cristales de Hielo.', rarity: 'uncommon', effect: { type: 'prod_single', material: 'IceCrystals', value: 1.15 } },
+            // Raros
             { id: 'r01', name: 'IA de Logística Avanzada', description: 'Reduce el coste de desbloqueo de planetas en un 10%.', rarity: 'rare', effect: { type: 'travel_cost', value: 0.90 } },
             { id: 'r02', name: 'Software de Corretaje Avanzado', description: '+20% a las ganancias por ventas.', rarity: 'rare', effect: { type: 'sell_all', value: 1.20 } },
+            // Legendarios Específicos de Planeta
             { id: 'l01', name: 'Archivos de la Humanidad Perdida', planet: 'Terra', description: 'Antiguos datos terrestres. Otorga $10,000 créditos al instante.', rarity: 'legendary', effect: { type: 'grant_money', value: 10000 } },
             { id: 'l02', name: 'Corazón de Forja Marciano', planet: 'Mars', description: 'Un núcleo de energía de antiguas forjas. +200% a la producción de Mineral de Asteroide.', rarity: 'legendary', effect: { type: 'prod_single', material: 'AsteroidOre', value: 3.0 } },
             { id: 'l03', name: 'Matriz Geotérmica', planet: 'Europa', description: 'Tecnología para licuar lunas heladas. +200% a la producción de Cristales de Hielo.', rarity: 'legendary', effect: { type: 'prod_single', material: 'IceCrystals', value: 3.0 } },
             { id: 'l04', name: 'Núcleo de Singularidad', planet: 'Kepler186f', description: 'Un objeto de poder incomprensible. Duplica todas las ganancias por ventas.', rarity: 'legendary', effect: { type: 'sell_all', value: 2.0 } },
+            // Legendario de PvP
             { id: 'l05', name: 'Esquema de Dron de Combate', source: 'pvp', description: 'Desbloquea la capacidad de construir drones de ataque en tu base.', rarity: 'legendary', effect: { type: 'unlock_pvp_unit' } }
-        ]
+        ],
+        // Añadido para que el fallback funcione si la Cloud Function no se ha ejecutado
+        PLANET_ECONOMIES: { Terra: { Helium3: 1.1, AsteroidOre: 0.9, IceCrystals: 0.8, AlienArtifacts: 0.7 }, Mars: { Helium3: 0.8, AsteroidOre: 1.5, IceCrystals: 1.0, AlienArtifacts: 0.9 }, Europa: { Helium3: 1.6, AsteroidOre: 0.7, IceCrystals: 1.4, AlienArtifacts: 1.1 }, Kepler186f: { Helium3: 1.0, AsteroidOre: 1.2, IceCrystals: 1.3, AlienArtifacts: 2.0 } }
     };
     
-    // --- ESTADO Y DOM ---
     let gameState = {};
     let marketPrices = {};
     const moneyCountEl = document.getElementById('money-count'), 
@@ -70,7 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
           loadingOverlay = document.getElementById('loading-overlay'),
           travelOverlay = document.getElementById('travel-overlay');
 
-    // --- SISTEMA DE GUARDADO ---
     let saveTimeout;
     function requestSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(saveGame, 2000); }
     function saveGame() { 
@@ -82,23 +87,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- LÓGICA DE LA INTERFAZ (UI) ---
     function getDefaultState() { 
         return { 
-            money: 200, 
-            currentPlanet: 'Terra', 
+            money: 200, currentPlanet: 'Terra', 
             inventory: Object.keys(CONFIG.MATERIALS).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), 
             upgradeLevels: Object.keys(CONFIG.UPGRADES).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), 
-            modules: [], 
-            unlockedPlanets: ['Terra'], 
-            lastLogin: null, 
-            achievedMissions: [], 
-            completedMissions: [],
-            dailyMissionProgress: {},
-            completedDailyMissions: [],
+            modules: [], unlockedPlanets: ['Terra'], lastLogin: null, 
+            achievedMissions: [], completedMissions: [],
+            dailyMissionProgress: {}, completedDailyMissions: [],
             baseLevels: { Defenses: 0, Attacks: 0 },
-            notifications: [],
-            alliance: null 
+            notifications: [], alliance: null 
         }; 
     }
     
@@ -130,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
         modulesListEl.innerHTML = (gameState.modules || []).map(module => `<div class="resource-line module-item"><div class="module-info"><h4 class="item-rarity ${module.rarity}">${module.name}</h4><p>${module.description}</p></div></div>`).join('') || "<p>No hay módulos instalados.</p>";
     }
 
-    // --- ACCIONES DEL JUGADOR ---
     window.sellMaterial = (key, amount) => {
         let amountToSell = (amount === 'all') ? Math.floor(gameState.inventory[key]) : parseInt(amount, 10);
         if (gameState.inventory[key] >= amountToSell && amountToSell > 0) {
@@ -148,7 +145,9 @@ document.addEventListener('DOMContentLoaded', () => {
             requestSave();
         }
     };
+
     window.buyUpgrade = (key) => { const upgrade = CONFIG.UPGRADES[key]; const cost = Math.ceil(upgrade.cost * Math.pow(1.15, (gameState.upgradeLevels[key] || 0))); if (gameState.money >= cost) { gameState.money -= cost; gameState.upgradeLevels[key]++; requestSave(); } };
+    
     window.travelToPlanet = (key) => {
         if (gameState.currentPlanet === key) return;
         const travelAction = () => {
@@ -185,29 +184,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- LÓGICA DE OBTENCIÓN DE MÓDULOS ---
     function findModule(source) {
-        const roll = Math.random() * 1000; // Un número entre 0 y 1000
+        const roll = Math.random() * 10000;
         let foundModule = null;
-
-        if (source === 'production') { // Drops de baja calidad por producción
-            if (roll < 10) { foundModule = CONFIG.MODULES.find(m => m.id === 'u01'); } // 1% uncommon
-            else if (roll < 50) { foundModule = CONFIG.MODULES.find(m => m.id === 'c02'); } // 4% common
-        } else if (source === 'sell') { // Drops de mejor calidad por vender
-            if (roll < 5) { foundModule = CONFIG.MODULES.find(m => m.id === 'r02'); } // 0.5% rare
-            else if (roll < 40) { foundModule = CONFIG.MODULES.find(m => m.id === 'u02'); } // 3.5% uncommon
+        if (source === 'production') {
+            if (roll < 20) { foundModule = CONFIG.MODULES.find(m => m.id === 'u01'); } 
+            else if (roll < 200) { foundModule = CONFIG.MODULES.find(m => m.id === 'c02'); }
+        } else if (source === 'sell') {
+            if (roll < 10) { foundModule = CONFIG.MODULES.find(m => m.id === 'r02'); } 
+            else if (roll < 100) { foundModule = CONFIG.MODULES.find(m => m.id === 'u02'); }
         }
-        
-        if (foundModule) {
-            const newModule = { ...foundModule, id: `mod_${Date.now()}` };
-            gameState.modules.push(newModule);
-            alert(`¡Descubrimiento Afortunado!\n\nHas encontrado un módulo de nave: ${newModule.name} (${newModule.rarity})`);
-            requestSave();
-        }
+        if (foundModule) { const newModule = { ...foundModule, id: `mod_${Date.now()}` }; gameState.modules.push(newModule); alert(`¡Descubrimiento Afortunado!\n\nHas encontrado: ${newModule.name} (${newModule.rarity})`); requestSave(); }
     }
 
     function checkForPlanetArtifact(planetKey) {
-        const PLANET_ARTIFACT_CHANCE = 1 / 25000; // Probabilidad muy baja
+        const PLANET_ARTIFACT_CHANCE = 1 / 25000;
         if (Math.random() < PLANET_ARTIFACT_CHANCE) {
             const planetArtifact = CONFIG.MODULES.find(m => m.planet === planetKey);
             if (planetArtifact && !(gameState.modules || []).some(m => m.id === planetArtifact.id)) {
@@ -224,31 +215,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function gameLoop() {
         const production = calculateProduction();
-        let productionChance = 0;
-        for (const material in production) {
-            productionChance += production[material];
-            gameState.inventory[material] += production[material] / 10;
-        }
-
+        for (const material in production) { gameState.inventory[material] += production[material] / 10; }
         if (Math.random() < 1 / 1500) { findModule('production'); }
-
         let artifactProduction = (production['AlienArtifacts'] || 0);
-        if (artifactProduction > 0 && Math.random() < (artifactProduction / 10)) {
-            checkForPlanetArtifact(gameState.currentPlanet);
-        }
-        
+        if (artifactProduction > 0 && Math.random() < (artifactProduction / 10)) { checkForPlanetArtifact(gameState.currentPlanet); }
         updateUI();
     }
     
-    // --- LÓGICA DE INICIALIZACIÓN ROBUSTA ---
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            initializeGame();
-        } else {
-            window.location.href = 'menu.html';
-        }
-    });
-
+    auth.onAuthStateChanged(user => { if (user) { initializeGame(); } else { window.location.href = 'menu.html'; } });
     async function initializeGame() {
         loadingOverlay.classList.remove('hidden');
         await Promise.all([ loadGame(), loadInitialMarketPrices() ]);
@@ -260,40 +234,25 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingOverlay.classList.add('hidden');
     }
 
-    async function loadGame() {
-        const user = auth.currentUser;
-        if (!user) { gameState = getDefaultState(); return; }
-        const docRef = db.collection('players').doc(user.uid);
-        const doc = await docRef.get();
-        gameState = doc.exists ? { ...getDefaultState(), ...doc.data() } : getDefaultState();
-    }
-
+    async function loadGame() { const user = auth.currentUser; if (!user) { gameState = getDefaultState(); return; } const docRef = db.collection('players').doc(user.uid); const doc = await docRef.get(); gameState = doc.exists ? { ...getDefaultState(), ...doc.data() } : getDefaultState(); }
+    
     async function loadInitialMarketPrices() {
         try {
             const doc = await db.collection('marketState').doc('globalPrices').get();
-            if (doc.exists) {
+            if (doc.exists && Object.keys(doc.data()).length > 0) {
                 marketPrices = doc.data();
             } else {
-                throw new Error("El documento de precios no existe.");
+                throw new Error("Documento de precios vacío o no existe.");
             }
         } catch (error) {
-            console.warn("Precios no encontrados, usando valores por defecto.", error);
-            const defaultPrices = {};
-            for (const planetKey in CONFIG.PLANETS) {
-                if (!CONFIG.PLANETS[planetKey].requiresMap) {
-                    defaultPrices[planetKey] = {};
-                    for (const materialKey in CONFIG.MATERIALS) {
-                        defaultPrices[planetKey][materialKey] = 1.0;
-                    }
-                }
-            }
-            marketPrices = defaultPrices;
+            console.warn("Precios del servidor no encontrados o inválidos. Usando economías base por defecto.", error);
+            marketPrices = CONFIG.PLANET_ECONOMIES;
         }
     }
 
     function listenForMarketUpdates() {
         db.collection('marketState').doc('globalPrices').onSnapshot((doc) => {
-            if (doc.exists) {
+            if (doc.exists && Object.keys(doc.data()).length > 0) {
                 marketPrices = doc.data();
             }
         });
