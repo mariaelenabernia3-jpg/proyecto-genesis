@@ -36,7 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
             await fetchPlayerData();
             loadingOverlay.classList.remove('visible');
         } else {
-            // Si el usuario no está logueado, lo devuelve al menú principal.
             window.location.href = 'menu.html';
         }
     });
@@ -47,14 +46,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const doc = await docRef.get();
         if (doc.exists) {
             playerData = doc.data();
-            // CORRECCIÓN DE BUG: Asegurarse de que los datos de la nave existen
             if (!playerData.patrolShip || !playerData.patrolShip.level) {
                 await initializePatrolShip(docRef);
-                const updatedDoc = await docRef.get(); // Volver a leer los datos recién creados
+                const updatedDoc = await docRef.get();
                 playerData = updatedDoc.data();
             }
         } else {
-            // Caso raro donde un usuario autenticado no tiene datos; crearlos y recargar.
             await initializePatrolShip(docRef);
             const newDoc = await docRef.get();
             playerData = newDoc.data();
@@ -62,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initializePatrolShip(docRef) {
-        // Esta función crea o repara los datos de la nave si faltan
         await docRef.set({
             patrolShip: {
                 speed: 5, fireRate: 30, damage: 1, maxHealth: 100,
@@ -71,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pieces: 0,
             components: 0,
             baseLevels: { Attacks: 0, Defenses: 0 }
-        }, { merge: true }); // Merge es CRUCIAL para no borrar otros datos del jugador
+        }, { merge: true });
     }
 
     // --- NAVEGACIÓN DEL MENÚ DE PATRULLAJE ---
@@ -91,7 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const upgradesList = document.getElementById('hangar-upgrades-list');
         const ship = playerData.patrolShip;
         const levels = ship.level;
-
         const costs = {
             speed: Math.floor(1000 * Math.pow(1.5, levels.speed - 1)),
             fireRate: Math.floor(1500 * Math.pow(1.6, levels.fireRate - 1)),
@@ -114,10 +109,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 [`patrolShip.level.${stat}`]: firebase.firestore.FieldValue.increment(1)
             };
             if (stat === 'speed') updates['patrolShip.speed'] = firebase.firestore.FieldValue.increment(0.5);
-            if (stat === 'fireRate') updates['patrolShip.fireRate'] = Math.max(5, ship.fireRate - 2); // Cap de cadencia mínima
+            if (stat === 'fireRate') updates['patrolShip.fireRate'] = Math.max(5, ship.fireRate - 2);
             if (stat === 'damage') updates['patrolShip.damage'] = firebase.firestore.FieldValue.increment(1);
             if (stat === 'maxHealth') updates['patrolShip.maxHealth'] = firebase.firestore.FieldValue.increment(25);
-            
             await db.collection('players').doc(auth.currentUser.uid).update(updates);
             await fetchPlayerData();
             renderHangar();
@@ -152,57 +146,114 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- LÓGICA DEL JUEGO DE PATRULLAJE (REDISEÑADA) ---
     const canvas = document.getElementById('patrol-game-canvas');
     const ctx = canvas.getContext('2d');
-    let player, enemies, bullets, enemyBullets, frameCount, piecesCollected, enemyLevel, gameLoopId;
 
-    startPatrolBtn.addEventListener('click', () => { gameplayOverlay.classList.remove('hidden'); initPatrolGame(); });
+    // --- NUEVO: Carga de imágenes ---
+    const playerImg = new Image();
+    const enemyImg = new Image();
+    const backgroundImg = new Image();
+    let assetsLoaded = 0;
+    const totalAssets = 3;
+
+    playerImg.src = 'assets/nave.png';
+    enemyImg.src = 'assets/Enemy.png';
+    backgroundImg.src = 'assets/fondo1.jpg';
+
+    playerImg.onload = assetLoaded;
+    enemyImg.onload = assetLoaded;
+    backgroundImg.onload = assetLoaded;
+
+    function assetLoaded() {
+        assetsLoaded++;
+        // Cuando todos los recursos estén cargados, el juego podrá empezar
+    }
+
+    let player, enemies, bullets, enemyBullets, frameCount, piecesCollected, enemyLevel, gameLoopId;
+    
+    // --- NUEVO: Variables para el fondo ---
+    let bgY1, bgY2, bgSpeed = 1;
+
+    const spawnRate = 90; 
+    const maxEnemies = 12; 
+
+    startPatrolBtn.addEventListener('click', () => {
+        if (assetsLoaded < totalAssets) {
+            alert("Cargando recursos del juego, por favor espera un momento...");
+            return;
+        }
+        gameplayOverlay.classList.remove('hidden');
+        initPatrolGame();
+    });
+    
     document.getElementById('exit-patrol-btn').addEventListener('click', () => gameOver(false));
 
     function initPatrolGame() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+        // Si el canvas es más ancho que el fondo, estira el fondo para cubrirlo
+        backgroundImg.width = Math.max(canvas.width, backgroundImg.naturalWidth);
+        
         const shipStats = playerData.patrolShip;
 
         player = {
-            x: canvas.width / 2 - 25, y: canvas.height - 80, width: 50, height: 30,
+            x: canvas.width / 2 - 35, y: canvas.height - 100, width: 70, height: 50, // Tamaño ajustado para la imagen
             fireRate: shipStats.fireRate, damage: shipStats.damage,
-            targetX: canvas.width / 2 - 25,
+            targetX: canvas.width / 2 - 35,
             draw() {
-                ctx.fillStyle = '#00ffff'; ctx.shadowBlur = 10; ctx.shadowColor = '#00ffff';
-                ctx.beginPath();
-                ctx.moveTo(this.x + this.width / 2, this.y);
-                ctx.lineTo(this.x, this.y + this.height);
-                ctx.lineTo(this.x + this.width, this.y + this.height);
-                ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+                // Dibuja la imagen de la nave en lugar de una forma
+                ctx.drawImage(playerImg, this.x, this.y, this.width, this.height);
             },
-            update() { this.x += (this.targetX - this.x) * 0.1; } // Movimiento suave
+            update() { this.x += (this.targetX - this.x) * 0.1; }
         };
+
         bullets = []; enemyBullets = []; enemies = [];
         frameCount = 0; piecesCollected = 0; enemyLevel = 1;
         gameLoopId = null;
 
+        // --- NUEVO: Inicializar posición del fondo ---
+        bgY1 = 0;
+        bgY2 = -canvas.height;
+
         gameLoop();
     }
     
+    function drawBackground() {
+        bgY1 += bgSpeed;
+        bgY2 += bgSpeed;
+
+        ctx.drawImage(backgroundImg, 0, bgY1, canvas.width, canvas.height);
+        ctx.drawImage(backgroundImg, 0, bgY2, canvas.width, canvas.height);
+
+        if (bgY1 > canvas.height) {
+            bgY1 = bgY2 - canvas.height;
+        }
+        if (bgY2 > canvas.height) {
+            bgY2 = bgY1 - canvas.height;
+        }
+    }
+
     function gameLoop() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // --- MODIFICADO: Dibuja primero el fondo en lugar de limpiar ---
+        drawBackground();
         frameCount++;
 
-        if (enemies.length === 0) spawnEnemy();
+        if (frameCount % spawnRate === 0 && enemies.length < maxEnemies) {
+            spawnEnemy();
+        }
 
         player.update();
         player.draw();
 
         if (frameCount % player.fireRate === 0) { bullets.push({ x: player.x + player.width / 2 - 2.5, y: player.y, width: 5, height: 15, speed: 7 }); }
         
-        // Actualizar y dibujar balas
         bullets.forEach((b, i) => { b.y -= b.speed; ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x, b.y, b.width, b.height); if (b.y < 0) bullets.splice(i, 1); });
         enemyBullets.forEach((b, i) => { b.y += b.speed; ctx.fillStyle = '#f96666'; ctx.fillRect(b.x, b.y, b.width, b.height); if (b.y > canvas.height) enemyBullets.splice(i, 1); });
 
-        // Actualizar y dibujar enemigos
         enemies.forEach((e, i) => {
             e.x += e.speedX * e.direction;
             if (e.x <= 0 || e.x + e.width >= canvas.width) e.direction *= -1;
-            ctx.fillStyle = '#ff4d4d'; ctx.fillRect(e.x, e.y, e.width, e.height);
+            
+            // --- MODIFICADO: Dibuja la imagen del enemigo ---
+            ctx.drawImage(enemyImg, e.x, e.y, e.width, e.height);
             
             if (frameCount % e.fireRate === 0) {
                 enemyBullets.push({ x: e.x + e.width / 2 - 3, y: e.y + e.height, width: 6, height: 12, speed: e.bulletSpeed });
@@ -214,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.health -= player.damage;
                     if (e.health <= 0) {
                         enemies.splice(i, 1);
-                        piecesCollected += Math.floor(Math.random() * 2) + enemyLevel;
+                        piecesCollected += Math.floor(Math.random() * 3) + enemyLevel;
                         enemyLevel++;
                     }
                     break;
@@ -222,12 +273,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Detectar colisión bala enemiga con jugador
         for (let i = enemyBullets.length - 1; i >= 0; i--) {
             let b = enemyBullets[i];
             if (b.x < player.x + player.width && b.x + b.width > player.x && b.y < player.y + player.height && b.y + b.height > player.y) {
-                gameOver(true); // El jugador fue derribado
-                return; // Detiene el bucle actual
+                gameOver(true);
+                return;
             }
         }
         
@@ -236,20 +286,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function spawnEnemy() {
-        const health = 3 + Math.floor(enemyLevel * 1.5);
-        const speedX = 1 + enemyLevel * 0.15;
-        const fireRate = Math.max(20, 60 - enemyLevel * 2);
-        const bulletSpeed = 3 + enemyLevel * 0.25;
-        enemies.push({ x: canvas.width / 2 - 25, y: 50, width: 50, height: 30, health, speedX, direction: 1, fireRate, bulletSpeed });
+        const health = 5 + Math.floor(enemyLevel * 1.8);
+        const speedX = 1 + enemyLevel * 0.2;
+        const fireRate = Math.max(15, 70 - enemyLevel * 2.5);
+        const bulletSpeed = 3 + enemyLevel * 0.3;
+        const enemyWidth = 60;
+        const enemyHeight = 45;
+        
+        const randomX = Math.random() * (canvas.width - enemyWidth);
+
+        enemies.push({ x: randomX, y: -50, width: enemyWidth, height: enemyHeight, health, speedX, direction: 1, fireRate, bulletSpeed });
     }
 
     function updateHUD() {
-        document.getElementById('hud-health').style.display = 'none'; // La vida ya no es relevante
+        document.getElementById('hud-health').style.display = 'none';
         document.getElementById('hud-pieces').querySelector('span').textContent = piecesCollected;
     }
 
     async function gameOver(wasKilled) {
-        if (!gameLoopId) return; // Prevenir múltiples llamadas
+        if (!gameLoopId) return;
         cancelAnimationFrame(gameLoopId);
         gameLoopId = null;
         
@@ -269,7 +324,6 @@ document.addEventListener('DOMContentLoaded', () => {
         showView(patrolMenuView);
     }
 
-    // --- CONTROLES (MOUSE Y TÁCTIL) ---
     canvas.addEventListener('mousemove', e => { if(player) player.targetX = e.clientX - player.width / 2; });
     canvas.addEventListener('touchmove', e => {
         e.preventDefault();
