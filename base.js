@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
         db.useEmulator("localhost", 8080);
     }
 
-    // ===== CONFIGURACIÓN DE UNIDADES DE COMBATE =====
     const BASE_CONFIG = {
         DEFENSES: { cost: 1000, power: 10 },
         UNITS: {
@@ -44,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const allianceChatContainer = document.getElementById('alliance-chat-container');
     const playerSearchInput = document.getElementById('player-search-input');
     const clearReportsBtn = document.getElementById('clear-reports-btn');
+    // ===== CORRECCIÓN CRÍTICA AQUÍ: El selector que faltaba ha sido añadido =====
     const allianceChatForm = document.getElementById('alliance-chat-form');
 
     function updateUI() {
@@ -347,7 +347,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!gameState.units) gameState.units = {};
                 if (!gameState.notifications) gameState.notifications = [];
 
-                // Si el estado de la alianza cambió (nos unimos o salimos), la UI debe reconstruirse completamente
                 if (hadAlliance !== gameState.alliance) {
                     if (allianceChatUnsubscribe) {
                         allianceChatUnsubscribe();
