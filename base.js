@@ -64,10 +64,15 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadAllianceMembers() {
         const listEl = document.getElementById('alliance-members-list');
         if (!listEl || !gameState.alliance) return;
-        const allianceDoc = await db.collection('alliances').doc(gameState.alliance).get();
-        if (allianceDoc.exists) {
-            const members = allianceDoc.data().members || [];
-            listEl.innerHTML = members.map(member => `<li>${member.name} ${member.id === currentUser.uid ? '(Tú)' : ''}</li>`).join('');
+        try {
+            const allianceDoc = await db.collection('alliances').doc(gameState.alliance).get();
+            if (allianceDoc.exists) {
+                const members = allianceDoc.data().members || [];
+                listEl.innerHTML = members.map(member => `<li>${member.name} ${member.id === currentUser.uid ? '(Tú)' : ''}</li>`).join('');
+            }
+        } catch (error) {
+            console.error("Error cargando miembros de alianza:", error);
+            listEl.innerHTML = "<li>Error al cargar miembros.</li>";
         }
     }
 
@@ -119,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const attackerData = attackerDoc.data();
             const defenderData = defenderDoc.data();
 
-            if (attackerData.alliance && attackerData.alliance === defenderData.alliance) {
+            if (attackerData.alliance && defenderData.alliance && attackerData.alliance === defenderData.alliance) {
                 attackLogEl.innerHTML = `<div class="log-item loss">No puedes atacar a un miembro de tu propia alianza.</div>` + (attackLogEl.innerHTML.includes('<p>') ? '' : attackLogEl.innerHTML);
                 return;
             }
@@ -135,7 +140,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (attackRoll > defenseRoll) {
                 const maxLoot = defenderData.money * 0.10;
                 const loot = Math.floor(Math.random() * maxLoot);
-                await attackerRef.update({ money: firebase.firestore.FieldValue.increment(loot) });
+                
+                const PVP_LEGENDARY_CHANCE = 1 / 1000;
+                let newModule = null;
+                if (Math.random() < PVP_LEGENDARY_CHANCE) {
+                    const droneSchematic = { id: 'l05', name: 'Esquema de Dron de Combate', description: 'Desbloquea la capacidad de construir drones de ataque en tu base.', rarity: 'legendary', effect: { type: 'unlock_pvp_unit' } };
+                    if (!(attackerData.modules || []).some(m => m.id === 'l05')) {
+                         newModule = { ...droneSchematic, id: `mod_${Date.now()}` };
+                         alert("¡VICTORIA CRÍTICA!\n\nHas recuperado un 'Esquema de Dron de Combate'.");
+                    }
+                }
+                
+                const attackerUpdate = { money: firebase.firestore.FieldValue.increment(loot) };
+                if (newModule) {
+                    attackerUpdate.modules = firebase.firestore.FieldValue.arrayUnion(newModule);
+                }
+
+                await attackerRef.update(attackerUpdate);
                 await defenderRef.update({ money: firebase.firestore.FieldValue.increment(-loot), notifications: firebase.firestore.FieldValue.arrayUnion({ ...notification, type: 'defense_loss', message: `¡Fuiste atacado por ${currentUser.displayName}! Perdiste $${loot.toLocaleString()} créditos.` }) });
                 attackLogEl.innerHTML = `<div class="log-item win">¡Victoria! Has saqueado $${loot.toLocaleString()} de ${targetName}.</div>` + (attackLogEl.innerHTML.includes('<p>') ? '' : attackLogEl.innerHTML);
             } else {
@@ -187,14 +208,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             currentUser = user;
             db.collection('players').doc(user.uid).onSnapshot((doc) => {
-                loadingOverlay.classList.add('hidden');
                 if (doc.exists) {
                     gameState = doc.data();
                 } else {
-                    // Si el jugador no tiene datos, creamos un estado por defecto para evitar errores
                     gameState = { money: 0, baseLevels: { Defenses: 0, Attacks: 0 }, notifications: [], alliance: null };
                 }
-                // Asegurarse de que las propiedades existan en partidas viejas
+                
                 if (!gameState.baseLevels) gameState.baseLevels = { Defenses: 0, Attacks: 0 };
                 if (!gameState.notifications) gameState.notifications = [];
                 
@@ -211,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 updateUI();
+                loadingOverlay.classList.add('hidden');
             }, (error) => {
                 console.error("Error al cargar datos del jugador: ", error);
                 loadingOverlay.classList.add('hidden');
