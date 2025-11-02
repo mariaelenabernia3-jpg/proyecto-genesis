@@ -28,6 +28,22 @@ body { margin: 0; font-family: var(--primary-font); background-color: var(--back
 .patrol-menu-btn h3 { margin: 0 0 5px; font-family: var(--primary-font); color: var(--accent-glow); font-size: 1.2rem; }
 .patrol-menu-btn p { margin: 0; font-family: sans-serif; opacity: 0.7; }
 
+/* --- NUEVO: Estilo para el botón desactivado --- */
+.patrol-menu-btn:disabled {
+    cursor: not-allowed;
+    background: rgba(40, 40, 40, 0.5);
+    border-color: #333;
+    border-left-color: #555;
+}
+.patrol-menu-btn:disabled h3 {
+    color: #888;
+}
+.patrol-menu-btn:disabled:hover {
+    background: rgba(40, 40, 40, 0.5);
+    border-color: #333;
+    border-left-color: #555;
+}
+
 .back-to-menu-btn { background: none; border: 1px solid #555; color: #999; padding: 5px 10px; cursor: pointer; margin-bottom: 20px; transition: all 0.2s; }
 .back-to-menu-btn:hover { color: #fff; border-color: #fff; }
 #hangar-upgrades-list .upgrade-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #333; }
@@ -44,7 +60,6 @@ body { margin: 0; font-family: var(--primary-font); background-color: var(--back
 .exchange-container small { opacity: 0.6; }
 
 #gameplay-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 300; display: flex; justify-content: center; align-items: center; }
-/* El borde se ha movido a la media query para que solo se vea en pantallas grandes */
 #patrol-game-canvas { touch-action: none; background: #000; }
 #game-hud { position: absolute; top: 20px; left: 20px; color: #fff; font-family: var(--primary-font); text-shadow: 0 0 5px #000; z-index: 310; }
 #game-hud div { font-size: 1.2rem; margin-bottom: 5px; background: rgba(0,0,0,0.4); padding: 5px 10px; border-radius: 5px;}

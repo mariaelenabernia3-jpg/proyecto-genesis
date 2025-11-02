@@ -30,6 +30,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const exchangeView = document.getElementById('exchange-view');
     const gameplayOverlay = document.getElementById('gameplay-overlay');
 
+    // --- LÓGICA DE CARGA DE RECURSOS DEL JUEGO ---
+    const playerImg = new Image();
+    const enemyImg = new Image();
+    const backgroundImg = new Image();
+    let assetsLoaded = 0;
+    const totalAssets = 3;
+
+    // --- CAMBIO: Desactivar el botón de inicio por defecto ---
+    startPatrolBtn.disabled = true;
+    startPatrolBtn.querySelector('h3').textContent = 'Cargando Recursos...';
+
+    function assetLoaded() {
+        assetsLoaded++;
+        if (assetsLoaded >= totalAssets) {
+            console.log("Todos los recursos del juego han sido cargados.");
+            // --- CAMBIO: Activar el botón y restaurar el texto cuando todo esté listo ---
+            startPatrolBtn.disabled = false;
+            startPatrolBtn.querySelector('h3').textContent = 'Iniciar Patrullaje';
+        }
+    }
+    
+    // --- CAMBIO: Añadir manejadores de error para depuración ---
+    function assetError(e) {
+        console.error("No se pudo cargar un recurso del juego:", e.target.src);
+        startPatrolBtn.querySelector('h3').textContent = 'Error al Cargar';
+        alert(`Error: No se pudo cargar la imagen '${e.target.src}'. Revisa que el archivo exista en la carpeta 'assets' y que el nombre sea correcto. Presiona F12 para ver la consola.`);
+    }
+
+    playerImg.onload = assetLoaded;
+    enemyImg.onload = assetLoaded;
+    backgroundImg.onload = assetLoaded;
+    
+    playerImg.onerror = assetError;
+    enemyImg.onerror = assetError;
+    backgroundImg.onerror = assetError;
+
+    // Iniciar la carga
+    playerImg.src = 'assets/nave.png';
+    enemyImg.src = 'assets/Enemy.png';
+    backgroundImg.src = 'assets/fondo1.jpg';
+
+
     // --- AUTENTICACIÓN Y CARGA DE DATOS ---
     auth.onAuthStateChanged(async user => {
         if (user) {
@@ -143,43 +185,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- LÓGICA DEL JUEGO DE PATRULLAJE (REDISEÑADA) ---
+    // --- LÓGICA DEL JUEGO DE PATRULLAJE ---
     const canvas = document.getElementById('patrol-game-canvas');
     const ctx = canvas.getContext('2d');
-
-    // --- NUEVO: Carga de imágenes ---
-    const playerImg = new Image();
-    const enemyImg = new Image();
-    const backgroundImg = new Image();
-    let assetsLoaded = 0;
-    const totalAssets = 3;
-
-    playerImg.src = 'assets/nave.png';
-    enemyImg.src = 'assets/Enemy.png';
-    backgroundImg.src = 'assets/fondo1.jpg';
-
-    playerImg.onload = assetLoaded;
-    enemyImg.onload = assetLoaded;
-    backgroundImg.onload = assetLoaded;
-
-    function assetLoaded() {
-        assetsLoaded++;
-        // Cuando todos los recursos estén cargados, el juego podrá empezar
-    }
-
     let player, enemies, bullets, enemyBullets, frameCount, piecesCollected, enemyLevel, gameLoopId;
-    
-    // --- NUEVO: Variables para el fondo ---
     let bgY1, bgY2, bgSpeed = 1;
-
     const spawnRate = 90; 
     const maxEnemies = 12; 
 
+    // --- CAMBIO: El listener ahora es más simple. Si se puede hacer clic, los recursos ya están cargados. ---
     startPatrolBtn.addEventListener('click', () => {
-        if (assetsLoaded < totalAssets) {
-            alert("Cargando recursos del juego, por favor espera un momento...");
-            return;
-        }
         gameplayOverlay.classList.remove('hidden');
         initPatrolGame();
     });
@@ -189,76 +204,46 @@ document.addEventListener('DOMContentLoaded', () => {
     function initPatrolGame() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        // Si el canvas es más ancho que el fondo, estira el fondo para cubrirlo
         backgroundImg.width = Math.max(canvas.width, backgroundImg.naturalWidth);
-        
         const shipStats = playerData.patrolShip;
-
         player = {
-            x: canvas.width / 2 - 35, y: canvas.height - 100, width: 70, height: 50, // Tamaño ajustado para la imagen
+            x: canvas.width / 2 - 35, y: canvas.height - 100, width: 70, height: 50,
             fireRate: shipStats.fireRate, damage: shipStats.damage,
             targetX: canvas.width / 2 - 35,
-            draw() {
-                // Dibuja la imagen de la nave en lugar de una forma
-                ctx.drawImage(playerImg, this.x, this.y, this.width, this.height);
-            },
+            draw() { ctx.drawImage(playerImg, this.x, this.y, this.width, this.height); },
             update() { this.x += (this.targetX - this.x) * 0.1; }
         };
-
         bullets = []; enemyBullets = []; enemies = [];
         frameCount = 0; piecesCollected = 0; enemyLevel = 1;
         gameLoopId = null;
-
-        // --- NUEVO: Inicializar posición del fondo ---
         bgY1 = 0;
         bgY2 = -canvas.height;
-
         gameLoop();
     }
     
     function drawBackground() {
         bgY1 += bgSpeed;
         bgY2 += bgSpeed;
-
         ctx.drawImage(backgroundImg, 0, bgY1, canvas.width, canvas.height);
         ctx.drawImage(backgroundImg, 0, bgY2, canvas.width, canvas.height);
-
-        if (bgY1 > canvas.height) {
-            bgY1 = bgY2 - canvas.height;
-        }
-        if (bgY2 > canvas.height) {
-            bgY2 = bgY1 - canvas.height;
-        }
+        if (bgY1 > canvas.height) bgY1 = bgY2 - canvas.height;
+        if (bgY2 > canvas.height) bgY2 = bgY1 - canvas.height;
     }
 
     function gameLoop() {
-        // --- MODIFICADO: Dibuja primero el fondo en lugar de limpiar ---
         drawBackground();
         frameCount++;
-
-        if (frameCount % spawnRate === 0 && enemies.length < maxEnemies) {
-            spawnEnemy();
-        }
-
+        if (frameCount % spawnRate === 0 && enemies.length < maxEnemies) spawnEnemy();
         player.update();
         player.draw();
-
-        if (frameCount % player.fireRate === 0) { bullets.push({ x: player.x + player.width / 2 - 2.5, y: player.y, width: 5, height: 15, speed: 7 }); }
-        
+        if (frameCount % player.fireRate === 0) bullets.push({ x: player.x + player.width / 2 - 2.5, y: player.y, width: 5, height: 15, speed: 7 });
         bullets.forEach((b, i) => { b.y -= b.speed; ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x, b.y, b.width, b.height); if (b.y < 0) bullets.splice(i, 1); });
         enemyBullets.forEach((b, i) => { b.y += b.speed; ctx.fillStyle = '#f96666'; ctx.fillRect(b.x, b.y, b.width, b.height); if (b.y > canvas.height) enemyBullets.splice(i, 1); });
-
         enemies.forEach((e, i) => {
             e.x += e.speedX * e.direction;
             if (e.x <= 0 || e.x + e.width >= canvas.width) e.direction *= -1;
-            
-            // --- MODIFICADO: Dibuja la imagen del enemigo ---
             ctx.drawImage(enemyImg, e.x, e.y, e.width, e.height);
-            
-            if (frameCount % e.fireRate === 0) {
-                enemyBullets.push({ x: e.x + e.width / 2 - 3, y: e.y + e.height, width: 6, height: 12, speed: e.bulletSpeed });
-            }
-
+            if (frameCount % e.fireRate === 0) enemyBullets.push({ x: e.x + e.width / 2 - 3, y: e.y + e.height, width: 6, height: 12, speed: e.bulletSpeed });
             for (let j = bullets.length - 1; j >= 0; j--) {
                 if (bullets[j].x < e.x + e.width && bullets[j].x + bullets[j].width > e.x && bullets[j].y < e.y + e.height && bullets[j].y + bullets[j].height > e.y) {
                     bullets.splice(j, 1);
@@ -272,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-
         for (let i = enemyBullets.length - 1; i >= 0; i--) {
             let b = enemyBullets[i];
             if (b.x < player.x + player.width && b.x + b.width > player.x && b.y < player.y + player.height && b.y + b.height > player.y) {
@@ -280,7 +264,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
         }
-        
         updateHUD();
         gameLoopId = requestAnimationFrame(gameLoop);
     }
@@ -292,9 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const bulletSpeed = 3 + enemyLevel * 0.3;
         const enemyWidth = 60;
         const enemyHeight = 45;
-        
         const randomX = Math.random() * (canvas.width - enemyWidth);
-
         enemies.push({ x: randomX, y: -50, width: enemyWidth, height: enemyHeight, health, speedX, direction: 1, fireRate, bulletSpeed });
     }
 
@@ -307,14 +288,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!gameLoopId) return;
         cancelAnimationFrame(gameLoopId);
         gameLoopId = null;
-        
         gameplayOverlay.classList.add('hidden');
-        
         if (piecesCollected > 0) {
-            await db.collection('players').doc(auth.currentUser.uid).update({
-                pieces: firebase.firestore.FieldValue.increment(piecesCollected)
-            });
-            if(wasKilled) alert(`¡Has sido derribado! Recolectaste ${piecesCollected} piezas.`);
+            await db.collection('players').doc(auth.currentUser.uid).update({ pieces: firebase.firestore.FieldValue.increment(piecesCollected) });
+            if (wasKilled) alert(`¡Has sido derribado! Recolectaste ${piecesCollected} piezas.`);
             else alert(`Patrullaje abandonado. Aseguraste ${piecesCollected} piezas.`);
         } else {
             if (wasKilled) alert("¡Has sido derribado! No recolectaste ninguna pieza.");
@@ -324,9 +301,9 @@ document.addEventListener('DOMContentLoaded', () => {
         showView(patrolMenuView);
     }
 
-    canvas.addEventListener('mousemove', e => { if(player) player.targetX = e.clientX - player.width / 2; });
+    canvas.addEventListener('mousemove', e => { if (player) player.targetX = e.clientX - player.width / 2; });
     canvas.addEventListener('touchmove', e => {
         e.preventDefault();
-        if(player && e.touches.length > 0) player.targetX = e.touches[0].clientX - player.width / 2;
+        if (player && e.touches.length > 0) player.targetX = e.touches[0].clientX - player.width / 2;
     }, { passive: false });
 });
