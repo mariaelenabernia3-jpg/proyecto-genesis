@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     let playerData = null;
+    let globalChatUnsubscribe = null;
 
     // --- SELECTORES ---
     const allModals = document.querySelectorAll('.modal-overlay');
@@ -36,9 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const missionsModal = document.getElementById('missions-modal');
     const leaderboardModal = document.getElementById('leaderboard-modal');
     const marketModal = document.getElementById('market-modal');
+    const globalChatModal = document.getElementById('global-chat-modal');
     const missionsBtn = document.getElementById('missions-btn');
     const leaderboardBtn = document.getElementById('leaderboard-btn');
     const marketBtn = document.getElementById('market-btn');
+    const globalChatBtn = document.getElementById('global-chat-btn');
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const showRegisterLink = document.getElementById('show-register');
@@ -51,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const marketSellView = document.getElementById('market-sell-view');
     const leaderboardContainer = document.getElementById('leaderboard-container');
     const missionsList = document.getElementById('missions-list');
+    const globalChatForm = document.getElementById('global-chat-form');
 
     // --- LÓGICA DE MODALES ---
     function openModal(modal) {
@@ -172,17 +176,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderMissions() {
         if (!playerData) { missionsList.innerHTML = "<p>No se pudieron cargar los datos del jugador.</p>"; return; }
-
         playerData.completedMissions = playerData.completedMissions || [];
         playerData.achievedMissions = playerData.achievedMissions || [];
         playerData.dailyMissionProgress = playerData.dailyMissionProgress || {};
         playerData.completedDailyMissions = playerData.completedDailyMissions || [];
-
         const renderMission = (mission, isDaily) => {
             const completedList = isDaily ? playerData.completedDailyMissions : playerData.completedMissions;
             const isClaimed = completedList.includes(mission.id);
             let progress = 0, progressText = "", isAchieved = false;
-
             switch (mission.requirement.type) {
                 case 'money': progress = Math.min(100, ((playerData.money || 0) / mission.requirement.value) * 100); progressText = `$${Math.floor(playerData.money || 0).toLocaleString()} / $${mission.requirement.value.toLocaleString()}`; break;
                 case 'upgrade': const currentLevel = (playerData.upgradeLevels && playerData.upgradeLevels[mission.requirement.key]) || 0; progress = Math.min(100, (currentLevel / mission.requirement.level) * 100); progressText = `Nivel ${currentLevel} / Nivel ${mission.requirement.level}`; break;
@@ -190,17 +191,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'sell': const soldAmount = playerData.dailyMissionProgress[`sell_${mission.requirement.material}`] || 0; progress = Math.min(100, (soldAmount / mission.requirement.value) * 100); progressText = `${soldAmount.toLocaleString()} / ${mission.requirement.value.toLocaleString()}`; break;
                 case 'earn': const earnedAmount = playerData.dailyMissionProgress['earn'] || 0; progress = Math.min(100, (earnedAmount / mission.requirement.value) * 100); progressText = `$${Math.floor(earnedAmount).toLocaleString()} / $${mission.requirement.value.toLocaleString()}`; break;
             }
-            
             isAchieved = progress >= 100;
             const canClaim = isAchieved && !isClaimed;
             let missionClass = isClaimed ? 'claimed' : (canClaim ? 'achieved' : '');
-
             return `<div class="mission-item ${missionClass}"><div class="mission-header"><h3 class="mission-title">${mission.title}</h3><span class="mission-reward">Recompensa: $${mission.reward.toLocaleString()}</span></div><p class="mission-description">${mission.description}</p><div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%;"></div></div><p class="progress-text">${progressText}</p><button class="claim-btn ${isClaimed ? 'claimed-style' : ''}" onclick="claimMissionReward('${mission.id}', ${isDaily})" ${!canClaim ? 'disabled' : ''}>${isClaimed ? 'Reclamado' : (canClaim ? 'Reclamar' : 'En Progreso')}</button></div>`;
         };
-        
         const dailyMissionsHTML = MISSIONS.filter(m => m.type === 'daily').map(m => renderMission(m, true)).join('');
         const mainMissionsHTML = MISSIONS.filter(m => m.type === 'main').map(m => renderMission(m, false)).join('');
-
         missionsList.innerHTML = `<h3 class="missions-divider">Misiones Diarias</h3>${dailyMissionsHTML || "<p>No hay misiones diarias disponibles.</p>"}<h3 class="missions-divider">Misiones Principales</h3>${mainMissionsHTML || "<p>Has completado todas las misiones principales.</p>"}`;
     }
 
@@ -209,11 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const mission = MISSIONS.find(m => m.id === missionId);
         const completedListKey = isDaily ? 'completedDailyMissions' : 'completedMissions';
         if (!mission || (playerData[completedListKey] && playerData[completedListKey].includes(missionId))) return;
-
-        const updates = {
-            [completedListKey]: firebase.firestore.FieldValue.arrayUnion(mission.id),
-            money: firebase.firestore.FieldValue.increment(mission.reward)
-        };
+        const updates = { [completedListKey]: firebase.firestore.FieldValue.arrayUnion(mission.id), money: firebase.firestore.FieldValue.increment(mission.reward) };
         await db.collection('players').doc(auth.currentUser.uid).update(updates);
         alert(`¡Recompensa de $${mission.reward.toLocaleString()} reclamada!`);
         await fetchPlayerData();
@@ -334,29 +327,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const listingRef = db.collection('marketplace').doc(listingId);
 
         try {
-            await db.runTransaction(async (transaction) => {
+            const listingData = await db.runTransaction(async (transaction) => {
                 const listingDoc = await transaction.get(listingRef);
                 if (!listingDoc.exists) throw new Error('Este objeto ya no está a la venta.');
 
-                const listingData = listingDoc.data();
-                const sellerRef = db.collection('players').doc(listingData.sellerId);
+                const data = listingDoc.data();
+                const sellerRef = db.collection('players').doc(data.sellerId);
 
-                if (listingData.sellerId === auth.currentUser.uid) throw new Error('No puedes comprar tu propio objeto.');
-                if (playerData.money < listingData.price) throw new Error('No tienes suficientes créditos.');
-
-                // Quita el dinero al comprador y añade el módulo
-                transaction.update(buyerRef, {
-                    money: firebase.firestore.FieldValue.increment(-listingData.price),
-                    modules: firebase.firestore.FieldValue.arrayUnion(listingData)
-                });
-
-                // Da el dinero al vendedor
-                transaction.update(sellerRef, {
-                    money: firebase.firestore.FieldValue.increment(listingData.price)
-                });
+                if (data.sellerId === auth.currentUser.uid) throw new Error('No puedes comprar tu propio objeto.');
                 
-                // Borra el listado del mercado
+                // Fetch latest playerData inside transaction for consistency
+                const buyerDoc = await transaction.get(buyerRef);
+                const currentMoney = buyerDoc.data().money || 0;
+                if (currentMoney < data.price) throw new Error('No tienes suficientes créditos.');
+
+                transaction.update(buyerRef, {
+                    money: firebase.firestore.FieldValue.increment(-data.price),
+                    modules: firebase.firestore.FieldValue.arrayUnion(data)
+                });
+                transaction.update(sellerRef, {
+                    money: firebase.firestore.FieldValue.increment(data.price)
+                });
                 transaction.delete(listingRef);
+                return data;
             });
 
             alert(`¡Has comprado ${listingData.name}!`);
@@ -365,7 +358,81 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Error al comprar:", error);
             alert(`Error: ${error.message}`);
-            loadMarketplace(); // Recargar para reflejar que el objeto ya no está
+            loadMarketplace();
         }
     };
+
+    // --- LÓGICA DE CHAT GLOBAL ---
+    globalChatBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (auth.currentUser) {
+            openModal(globalChatModal);
+            setupGlobalChatListener();
+        } else {
+            alert("Debes iniciar sesión para usar el chat global.");
+        }
+    });
+
+    function setupGlobalChatListener() {
+        if (globalChatUnsubscribe) return;
+
+        const chatBox = document.getElementById('global-chat-box');
+        chatBox.innerHTML = '';
+
+        const chatQuery = db.collection('global_chat').orderBy('timestamp', 'asc').limitToLast(100);
+
+        globalChatUnsubscribe = chatQuery.onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(change => {
+                if (change.type === 'added') {
+                    const data = change.doc.data();
+                    const msgEl = document.createElement('div');
+                    msgEl.classList.add('chat-message');
+                    const time = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '...';
+                    
+                    msgEl.innerHTML = `
+                        <div class="message-header">
+                            <span class="message-sender">${data.senderName}</span>
+                            <span class="message-time">${time}</span>
+                        </div>
+                        <p class="message-content">${data.message}</p>`;
+                    
+                    chatBox.appendChild(msgEl);
+                }
+            });
+            setTimeout(() => { chatBox.scrollTop = chatBox.scrollHeight; }, 0);
+        }, error => {
+            console.error("Error al escuchar el chat global:", error);
+            chatBox.innerHTML = "<p>Error de conexión con el chat.</p>";
+        });
+    }
+    
+    // Detener listener cuando se cierra el modal para ahorrar recursos
+    globalChatModal.addEventListener('click', (e) => {
+        if (e.target === globalChatModal || e.target.closest('.close-btn')) {
+             if (globalChatUnsubscribe) {
+                globalChatUnsubscribe();
+                globalChatUnsubscribe = null;
+            }
+        }
+    });
+
+    globalChatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = document.getElementById('global-chat-input');
+        const message = input.value.trim();
+        const user = auth.currentUser;
+
+        if (message && user) {
+            db.collection('global_chat').add({
+                senderName: user.displayName,
+                senderId: user.uid,
+                message: message,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                input.value = '';
+            }).catch(error => {
+                console.error("Error al enviar mensaje:", error);
+            });
+        }
+    });
 });

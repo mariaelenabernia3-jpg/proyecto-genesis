@@ -65,14 +65,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getDefaultState() { return { money: 200, currentPlanet: 'Terra', inventory: Object.keys(CONFIG.MATERIALS).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), upgradeLevels: Object.keys(CONFIG.UPGRADES).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), modules: [], unlockedPlanets: ['Terra'], lastLogin: null, achievedMissions: [], completedMissions: [], dailyMissionProgress: {}, completedDailyMissions: [], baseLevels: { Defenses: 0, Attacks: 0 }, notifications: [], alliance: null }; }
     
-    // ===== NUEVA FUNCIÓN PARA NOTIFICACIONES =====
     function addNotification(message, type = 'info') {
         if (!gameState.notifications) gameState.notifications = [];
         gameState.notifications.push({ message, type, date: new Date().toISOString() });
         if (gameState.notifications.length > 50) gameState.notifications.shift();
     }
 
-    // ===== NUEVA FUNCIÓN PARA FEEDBACK VISUAL =====
     function showFloatingText(text, element, color) {
         const rect = element.getBoundingClientRect();
         const x = rect.left + rect.width / 2;
@@ -87,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function updateUI() {
         if (typeof gameState.money === 'undefined') return;
-        
         moneyCountEl.textContent = Math.floor(gameState.money).toLocaleString();
         planetNameEl.textContent = CONFIG.PLANETS[gameState.currentPlanet].name;
         inventoryListEl.innerHTML = Object.entries(gameState.inventory).map(([key, value]) => `<div class="resource-line"><span class="item-name">${CONFIG.MATERIALS[key].name}</span><span class="item-details">${Math.floor(value).toLocaleString()}</span></div>`).join('') || "<p>Bodega de carga vacía.</p>";
@@ -99,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const price = material.baseValue * modifier;
                 const hasMaterial = gameState.inventory[key] >= 1;
                 const amountOwned = Math.floor(gameState.inventory[key]);
-                const totalValue = Math.floor(price * amountOwned); // ===== CÁLCULO PARA EL BOTÓN =====
+                const totalValue = Math.floor(price * amountOwned);
                 return `<div class="resource-line"><div class="item-name">${material.name}<div class="item-details"><span>Precio: $${price.toFixed(2)}</span></div></div><div class="button-group"><button onclick="sellMaterial(event, '${key}', 1)" class="sell-btn ${!hasMaterial ? 'disabled' : ''}">Vender 1</button><button onclick="sellMaterial(event, '${key}', 'all')" class="sell-all-btn ${!hasMaterial ? 'disabled' : ''}">Vender Todo ($${totalValue.toLocaleString()})</button></div></div>`;
             }).join('');
         } else {
@@ -116,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
         
         modulesListEl.innerHTML = (gameState.modules || []).map(module => `<div class="resource-line module-item"><div class="module-info"><h4 class="item-rarity ${module.rarity}">${module.name}</h4><p>${module.description}</p></div></div>`).join('') || "<p>No hay módulos instalados.</p>";
-
         notificationsListEl.innerHTML = (gameState.notifications || []).slice(-10).reverse().map(n => `<div class="notification-item type-${n.type}">${n.message}</div>`).join('') || "<p>Sin sucesos recientes.</p>";
     }
 
@@ -128,19 +124,14 @@ document.addEventListener('DOMContentLoaded', () => {
             let price = material.baseValue * modifier;
             (gameState.modules || []).forEach(m => { if (m.effect.type === 'sell_all') price *= m.effect.value; });
             const earnings = price * amountToSell;
-
-            // ===== CONFIRMACIÓN PARA "VENDER TODO" =====
             if (amount === 'all' && !confirm(`¿Vender ${amountToSell.toLocaleString()} de ${material.name} por $${Math.floor(earnings).toLocaleString()}?`)) return;
-            
             gameState.inventory[key] -= amountToSell;
             gameState.money += earnings;
-            
-            showFloatingText(`+$${Math.floor(earnings).toLocaleString()}`, event.target, 'var(--accent-sell)'); // ===== FEEDBACK VISUAL =====
-
+            showFloatingText(`+$${Math.floor(earnings).toLocaleString()}`, event.target, 'var(--accent-sell)');
             if (!gameState.dailyMissionProgress) gameState.dailyMissionProgress = {};
             gameState.dailyMissionProgress[`sell_${key}`] = (gameState.dailyMissionProgress[`sell_${key}`] || 0) + amountToSell;
             gameState.dailyMissionProgress['earn'] = (gameState.dailyMissionProgress['earn'] || 0) + earnings;
-            if (Math.random() < 1 / 750) { findModule('sell'); }
+            if (Math.random() < 1 / 250) { findModule('sell'); } // Probabilidad de encontrar módulo al vender aumentada
             requestSave();
         }
     };
@@ -183,34 +174,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // ===== REEQUILIBRADO DE PROBABILIDADES =====
     function findModule(source) {
-        const roll = Math.random() * 10000;
+        const roll = Math.random() * 10000; // Tirada sobre 10,000 para más granularidad
         let foundModule = null;
+        
+        // Probabilidades: Común (5%), No Común (1%), Raro (0.2%)
         if (source === 'production') {
-            if (roll < 20) { foundModule = CONFIG.MODULES.find(m => m.id === 'u01'); } 
-            else if (roll < 200) { foundModule = CONFIG.MODULES.find(m => m.id === 'c02'); }
+            if (roll < 20) { foundModule = CONFIG.MODULES.find(m => m.id === 'u01'); } // 20/10000 = 0.2% -> No Común
+            else if (roll < 520) { foundModule = CONFIG.MODULES.find(m => m.id === 'c02'); } // 500/10000 = 5% -> Común
         } else if (source === 'sell') {
-            if (roll < 10) { foundModule = CONFIG.MODULES.find(m => m.id === 'r02'); } 
-            else if (roll < 100) { foundModule = CONFIG.MODULES.find(m => m.id === 'u02'); }
+            if (roll < 20) { foundModule = CONFIG.MODULES.find(m => m.id === 'r02'); } // 20/10000 = 0.2% -> Raro
+            else if (roll < 120) { foundModule = CONFIG.MODULES.find(m => m.id === 'u02'); } // 100/10000 = 1% -> No Común
+            else if (roll < 820) { foundModule = CONFIG.MODULES.find(m => m.id === 'c01'); } // 700/10000 = 7% -> Común
         }
+        
         if (foundModule) {
             const newModule = { ...foundModule, id: `mod_${Date.now()}` };
             if (!gameState.modules) gameState.modules = [];
             gameState.modules.push(newModule);
-            addNotification(`Módulo Encontrado: ${newModule.name} (${newModule.rarity})`, 'reward'); // ===== NOTIFICACIÓN EN LUGAR DE ALERTA =====
+            addNotification(`Módulo Encontrado: ${newModule.name} (${newModule.rarity})`, 'reward');
             requestSave();
         }
     }
 
     function checkForPlanetArtifact(planetKey) {
-        const PLANET_ARTIFACT_CHANCE = 1 / 25000;
+        // Probabilidad de artefacto legendario reducida a la mitad (más difícil)
+        const PLANET_ARTIFACT_CHANCE = 1 / 50000; 
         if (Math.random() < PLANET_ARTIFACT_CHANCE) {
             const planetArtifact = CONFIG.MODULES.find(m => m.planet === planetKey);
             if (planetArtifact && !(gameState.modules || []).some(m => m.id === planetArtifact.id)) {
                 const newModule = { ...planetArtifact, id: `mod_${Date.now()}` };
                 if (!gameState.modules) gameState.modules = [];
                 gameState.modules.push(newModule);
-                addNotification(`¡Hallazgo Legendario en ${CONFIG.PLANETS[planetKey].name}: ${newModule.name}!`, 'reward'); // ===== NOTIFICACIÓN EN LUGAR DE ALERTA =====
+                addNotification(`¡Hallazgo Legendario en ${CONFIG.PLANETS[planetKey].name}: ${newModule.name}!`, 'reward');
                 if (newModule.effect.type === 'grant_money') { gameState.money += newModule.effect.value; }
                 requestSave();
             }
@@ -222,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function gameLoop() {
         const production = calculateProduction();
         for (const material in production) { gameState.inventory[material] += production[material] / 10; }
-        if (Math.random() < 1 / 1500) { findModule('production'); }
+        if (Math.random() < 1 / 500) { findModule('production'); } // Probabilidad de encontrar módulo por producción aumentada
         let artifactProduction = (production['AlienArtifacts'] || 0);
         if (artifactProduction > 0 && Math.random() < (artifactProduction / 10)) { checkForPlanetArtifact(gameState.currentPlanet); }
         updateUI();

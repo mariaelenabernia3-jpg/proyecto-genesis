@@ -67,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     enemyImg.src = 'assets/Enemy.png';
     backgroundImg.src = 'assets/fondo1.png';
 
+
     // --- AUTENTICACIÓN Y CARGA DE DATOS ---
     auth.onAuthStateChanged(async user => {
         if (user) {
@@ -185,10 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = canvas.getContext('2d');
     let player, enemies, bullets, enemyBullets, frameCount, piecesCollected, enemyLevel, gameLoopId;
     let bgY1, bgY2, bgSpeed = 1;
-
-    // --- CAMBIO: Parámetros de dificultad ajustados ---
-    const spawnRate = 75; // Aparecen más rápido
-    const maxEnemies = 15; // Más enemigos en pantalla
+    const spawnRate = 75; 
+    const maxEnemies = 15;
 
     startPatrolBtn.addEventListener('click', () => {
         gameplayOverlay.classList.remove('hidden');
@@ -234,16 +233,26 @@ document.addEventListener('DOMContentLoaded', () => {
         player.update();
         player.draw();
         if (frameCount % player.fireRate === 0) bullets.push({ x: player.x + player.width / 2 - 2.5, y: player.y, width: 5, height: 15, speed: 7 });
-        bullets.forEach((b, i) => { b.y -= b.speed; ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x, b.y, b.width, b.height); if (b.y < 0) bullets.splice(i, 1); });
-        enemyBullets.forEach((b, i) => { b.y += b.speed; ctx.fillStyle = '#f96666'; ctx.fillRect(b.x, b.y, b.width, b.height); if (b.y > canvas.height) enemyBullets.splice(i, 1); });
+        
+        bullets.forEach((b, i) => {
+            b.y -= b.speed;
+            // --- CAMBIO: Color de la bala del jugador cambiado a verde neón ---
+            ctx.fillStyle = '#39FF14'; 
+            ctx.fillRect(b.x, b.y, b.width, b.height);
+            if (b.y < 0) bullets.splice(i, 1);
+        });
+
+        enemyBullets.forEach((b, i) => {
+            b.y += b.speed;
+            ctx.fillStyle = '#f96666';
+            ctx.fillRect(b.x, b.y, b.width, b.height);
+            if (b.y > canvas.height) enemyBullets.splice(i, 1);
+        });
         
         for (let i = enemies.length - 1; i >= 0; i--) {
             const e = enemies[i];
             e.x += e.speedX * e.direction;
-            // --- CAMBIO: Movimiento vertical ELIMINADO ---
-
             if (e.x <= 0 || e.x + e.width >= canvas.width) e.direction *= -1;
-            
             ctx.drawImage(enemyImg, e.x, e.y, e.width, e.height);
             if (frameCount % e.fireRate === 0) enemyBullets.push({ x: e.x + e.width / 2 - 3, y: e.y + e.height, width: 6, height: 12, speed: e.bulletSpeed });
 
@@ -270,23 +279,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
         }
-
         updateHUD();
         gameLoopId = requestAnimationFrame(gameLoop);
     }
 
     function spawnEnemy() {
-        // --- CAMBIO: Estadísticas de enemigos ajustadas para mayor dificultad ---
         const health = 8 + Math.floor(enemyLevel * 2.2);
-        const speedX = 1.5 + enemyLevel * 0.25; // Más rápidos lateralmente
-        const fireRate = Math.max(15, 80 - enemyLevel * 3); // Su cadencia mejora más rápido
-        const bulletSpeed = 4 + enemyLevel * 0.4; // Balas mucho más veloces
+        const speedX = 1.5 + enemyLevel * 0.25;
+        const fireRate = Math.max(15, 80 - enemyLevel * 3);
+        const bulletSpeed = 4 + enemyLevel * 0.4;
         const enemyWidth = 60;
         const enemyHeight = 45;
-        
         const randomX = Math.random() * (canvas.width - enemyWidth);
-        // --- CAMBIO: Aparecen en una zona visible en la parte superior ---
-        const randomY = 50 + Math.random() * (canvas.height * 0.3); // Aparecen en el 30% superior de la pantalla
+        const randomY = 50 + Math.random() * (canvas.height * 0.3);
 
         enemies.push({ x: randomX, y: randomY, width: enemyWidth, height: enemyHeight, health, speedX, direction: 1, fireRate, bulletSpeed });
     }
