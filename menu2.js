@@ -37,7 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let assetsLoaded = 0;
     const totalAssets = 3;
 
-    // --- CAMBIO: Desactivar el botón de inicio por defecto ---
     startPatrolBtn.disabled = true;
     startPatrolBtn.querySelector('h3').textContent = 'Cargando Recursos...';
 
@@ -45,13 +44,11 @@ document.addEventListener('DOMContentLoaded', () => {
         assetsLoaded++;
         if (assetsLoaded >= totalAssets) {
             console.log("Todos los recursos del juego han sido cargados.");
-            // --- CAMBIO: Activar el botón y restaurar el texto cuando todo esté listo ---
             startPatrolBtn.disabled = false;
             startPatrolBtn.querySelector('h3').textContent = 'Iniciar Patrullaje';
         }
     }
     
-    // --- CAMBIO: Añadir manejadores de error para depuración ---
     function assetError(e) {
         console.error("No se pudo cargar un recurso del juego:", e.target.src);
         startPatrolBtn.querySelector('h3').textContent = 'Error al Cargar';
@@ -66,11 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
     enemyImg.onerror = assetError;
     backgroundImg.onerror = assetError;
 
-    // Iniciar la carga
     playerImg.src = 'assets/nave.png';
     enemyImg.src = 'assets/Enemy.png';
     backgroundImg.src = 'assets/fondo1.png';
-
 
     // --- AUTENTICACIÓN Y CARGA DE DATOS ---
     auth.onAuthStateChanged(async user => {
@@ -193,7 +188,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const spawnRate = 90; 
     const maxEnemies = 12; 
 
-    // --- CAMBIO: El listener ahora es más simple. Si se puede hacer clic, los recursos ya están cargados. ---
     startPatrolBtn.addEventListener('click', () => {
         gameplayOverlay.classList.remove('hidden');
         initPatrolGame();
@@ -208,6 +202,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const shipStats = playerData.patrolShip;
         player = {
             x: canvas.width / 2 - 35, y: canvas.height - 100, width: 70, height: 50,
+            // --- CAMBIO: Añadidas propiedades de hitbox para colisiones más justas ---
+            hitboxWidth: 50,  // ~25% más pequeño que el ancho de la imagen
+            hitboxHeight: 38, // ~25% más pequeño que el alto de la imagen
             fireRate: shipStats.fireRate, damage: shipStats.damage,
             targetX: canvas.width / 2 - 35,
             draw() { ctx.drawImage(playerImg, this.x, this.y, this.width, this.height); },
@@ -239,11 +236,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (frameCount % player.fireRate === 0) bullets.push({ x: player.x + player.width / 2 - 2.5, y: player.y, width: 5, height: 15, speed: 7 });
         bullets.forEach((b, i) => { b.y -= b.speed; ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x, b.y, b.width, b.height); if (b.y < 0) bullets.splice(i, 1); });
         enemyBullets.forEach((b, i) => { b.y += b.speed; ctx.fillStyle = '#f96666'; ctx.fillRect(b.x, b.y, b.width, b.height); if (b.y > canvas.height) enemyBullets.splice(i, 1); });
-        enemies.forEach((e, i) => {
+        
+        // Bucle para actualizar enemigos
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const e = enemies[i];
             e.x += e.speedX * e.direction;
+            // --- CAMBIO: Los enemigos ahora se mueven hacia abajo ---
+            e.y += e.speedY;
+
             if (e.x <= 0 || e.x + e.width >= canvas.width) e.direction *= -1;
+            
+            // --- CAMBIO: Eliminar enemigos si salen por abajo ---
+            if (e.y > canvas.height) {
+                enemies.splice(i, 1);
+                continue; // Saltar al siguiente enemigo
+            }
+            
             ctx.drawImage(enemyImg, e.x, e.y, e.width, e.height);
             if (frameCount % e.fireRate === 0) enemyBullets.push({ x: e.x + e.width / 2 - 3, y: e.y + e.height, width: 6, height: 12, speed: e.bulletSpeed });
+
             for (let j = bullets.length - 1; j >= 0; j--) {
                 if (bullets[j].x < e.x + e.width && bullets[j].x + bullets[j].width > e.x && bullets[j].y < e.y + e.height && bullets[j].y + bullets[j].height > e.y) {
                     bullets.splice(j, 1);
@@ -256,14 +267,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 }
             }
-        });
+        }
+
+        // Bucle para colisiones con el jugador
         for (let i = enemyBullets.length - 1; i >= 0; i--) {
             let b = enemyBullets[i];
-            if (b.x < player.x + player.width && b.x + b.width > player.x && b.y < player.y + player.height && b.y + b.height > player.y) {
+            // --- CAMBIO: La detección de colisión ahora usa el hitbox ajustado ---
+            const hitboxX = player.x + (player.width - player.hitboxWidth) / 2;
+            const hitboxY = player.y + (player.height - player.hitboxHeight) / 2;
+
+            if (b.x < hitboxX + player.hitboxWidth &&
+                b.x + b.width > hitboxX &&
+                b.y < hitboxY + player.hitboxHeight &&
+                b.y + b.height > hitboxY) {
                 gameOver(true);
                 return;
             }
         }
+
         updateHUD();
         gameLoopId = requestAnimationFrame(gameLoop);
     }
@@ -276,7 +297,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const enemyWidth = 60;
         const enemyHeight = 45;
         const randomX = Math.random() * (canvas.width - enemyWidth);
-        enemies.push({ x: randomX, y: -50, width: enemyWidth, height: enemyHeight, health, speedX, direction: 1, fireRate, bulletSpeed });
+        // --- CAMBIO: Añadida velocidad vertical para que se muevan hacia abajo ---
+        const speedY = 1 + Math.random() * 1; // Velocidad vertical variable para más dinamismo
+
+        enemies.push({ x: randomX, y: -50, width: enemyWidth, height: enemyHeight, health, speedX, speedY, direction: 1, fireRate, bulletSpeed });
     }
 
     function updateHUD() {
@@ -306,5 +330,4 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         if (player && e.touches.length > 0) player.targetX = e.touches[0].clientX - player.width / 2;
     }, { passive: false });
-
 });
