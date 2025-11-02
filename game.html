@@ -10,53 +10,28 @@
     <link rel="stylesheet" href="game.style.css">
 </head>
 <body>
-    <!-- Capas de Efectos Visuales -->
     <div id="scanlines-overlay"></div>
     <div id="loading-overlay" class="visible"><h1>CARGANDO DATOS DE LA NAVE...</h1></div>
     
-    <!-- Encabezado -->
     <header id="game-header">
         <a href="menu.html" class="back-btn">&laquo; Volver al Menú</a>
-        <div class="resource-display">
-            Créditos: $<span id="money-count">0</span>
-        </div>
-        <div class="location-display">
-            Ubicación: <span id="planet-name"></span>
-        </div>
+        <div class="resource-display">Créditos: $<span id="money-count">0</span></div>
+        <div class="location-display">Ubicación: <span id="planet-name"></span></div>
     </header>
 
-    <!-- Contenido Principal -->
     <main id="game-container">
-        <!-- Columna Izquierda -->
-        <section id="left-panel">
-            <div class="panel">
-                <h2>Inventario de Carga</h2>
-                <div id="inventory-list" class="resource-list"></div>
-            </div>
-            <div class="panel">
-                <h2>Módulos de Nave</h2>
-                <div id="modules-list" class="resource-list"></div>
-            </div>
-            <div class="panel">
-                <h2>Mejoras de Extracción</h2>
-                <div id="upgrades-list" class="upgrades-list"></div>
-            </div>
-        </section>
-
-        <!-- Columna Derecha -->
-        <section id="right-panel">
-            <div class="panel">
-                <h2>Mercado Planetario</h2>
-                <div id="market-list" class="resource-list"></div>
-            </div>
-            <div class="panel">
-                <h2>Navegación</h2>
-                <div id="travel-list" class="travel-list"></div>
-            </div>
-        </section>
+        <section id="left-panel"><div class="panel"><h2>Inventario de Carga</h2><div id="inventory-list" class="resource-list"></div></div><div class="panel"><h2>Módulos de Nave</h2><div id="modules-list" class="resource-list"></div></div><div class="panel"><h2>Mejoras de Extracción</h2><div id="upgrades-list" class="upgrades-list"></div></div></section>
+        <section id="right-panel"><div class="panel"><h2>Mercado Planetario</h2><div id="market-list" class="resource-list"></div></div><div class="panel"><h2>Navegación</h2><div id="travel-list" class="travel-list"></div></div></section>
     </main>
 
-    <!-- Scripts de Firebase y del Juego -->
+    <!-- PANTALLA DE CARGA DE VIAJE AÑADIDA -->
+    <div id="travel-overlay" class="hidden">
+        <div class="ship-animation">
+            <svg class="ship" viewBox="0 0 100 100"><path d="M 50 10 L 20 90 L 50 70 L 80 90 Z"></path></svg>
+        </div>
+        <h2 class="travel-text">SALTANDO AL HIPERESPACIO...</h2>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>

@@ -24,36 +24,39 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURACIÓN DEL JUEGO (REEQUILIBRADA) ---
     const CONFIG = {
         MATERIALS: { 
-            Helium3: { name: "Helio-3", baseValue: 2 },
-            AsteroidOre: { name: "Mineral de Asteroide", baseValue: 8 },
-            IceCrystals: { name: "Cristales de Hielo", baseValue: 20 },
-            AlienArtifacts: { name: "Artefactos Alienígenas", baseValue: 100 } 
+            Helium3: { name: "Helio-3", baseValue: 5 },
+            AsteroidOre: { name: "Mineral de Asteroide", baseValue: 20 },
+            IceCrystals: { name: "Cristales de Hielo", baseValue: 55 },
+            AlienArtifacts: { name: "Artefactos Alienígenas", baseValue: 220 } 
         },
         PLANETS: { 
             Terra: { name: "Terra", travelCost: 0 }, 
-            Mars: { name: "Marte", travelCost: 500 }, 
-            Europa: { name: "Europa", travelCost: 2500 }, 
-            Kepler186f: { name: "Kepler-186f", travelCost: 10000 },
-            ProximaCentauri: { name: "Proxima Centauri", travelCost: 50000, requiresMap: true }
+            Mars: { name: "Marte", travelCost: 2500 }, 
+            Europa: { name: "Europa", travelCost: 12000 }, 
+            Kepler186f: { name: "Kepler-186f", travelCost: 50000 },
+            ProximaCentauri: { name: "Proxima Centauri", travelCost: 100000, requiresMap: true }
         },
         UPGRADES: { 
-            Drones: { name: "Drones de Minería", cost: 25, baseProd: { Helium3: 0.5 } }, 
-            Frigates: { name: "Fragatas de Carga", cost: 200, baseProd: { AsteroidOre: 0.2 } }, 
-            IceDrills: { name: "Taladros Criogénicos", cost: 1000, baseProd: { IceCrystals: 0.1 } }, 
-            Scanners: { name: "Escáneres de Largo Alcance", cost: 5000, baseProd: { AlienArtifacts: 0.01 } }
+            Drones: { name: "Drones de Minería", cost: 150, baseProd: { Helium3: 0.5 } }, 
+            Frigates: { name: "Fragatas de Carga", cost: 1200, baseProd: { AsteroidOre: 0.2 } }, 
+            IceDrills: { name: "Taladros Criogénicos", cost: 8000, baseProd: { IceCrystals: 0.1 } }, 
+            Scanners: { name: "Escáneres de Largo Alcance", cost: 40000, baseProd: { AlienArtifacts: 0.01 } }
         },
         MODULES: [
-            { id: 'm01', name: 'Optimizador de Minería', description: '+10% a la producción.', rarity: 'common', effect: { type: 'prod_all', value: 1.10 } },
-            { id: 'm02', name: 'Software de Corretaje', description: '+15% a las ventas.', rarity: 'rare', effect: { type: 'sell_all', value: 1.15 } },
-            // Artefactos Específicos de Planeta
-            { id: 's01', name: 'Núcleo de Singularidad', planet: 'Kepler186f', description: 'Encontrado en los confines del espacio. Duplica todas las ganancias por ventas.', rarity: 'legendary', effect: { type: 'sell_all', value: 2.0 } },
-            { id: 's02', name: 'Archivos de la Humanidad Perdida', planet: 'Terra', description: 'Antiguos datos terrestres. Otorga $10,000 créditos al instante.', rarity: 'legendary', effect: { type: 'grant_money', value: 10000 } },
-            { id: 's03', name: 'Corazón de Forja Marciano', planet: 'Mars', description: 'Un núcleo de energía de antiguas forjas. +200% a la producción de Mineral de Asteroide.', rarity: 'legendary', effect: { type: 'prod_single', material: 'AsteroidOre', value: 3.0 } },
-            { id: 's04', name: 'Matriz Geotérmica', planet: 'Europa', description: 'Tecnología para licuar lunas heladas. +200% a la producción de Cristales de Hielo.', rarity: 'legendary', effect: { type: 'prod_single', material: 'IceCrystals', value: 3.0 } }
+            { id: 'c01', name: 'Micro-Condensador', description: '+3% a las ganancias por ventas.', rarity: 'common', effect: { type: 'sell_all', value: 1.03 } },
+            { id: 'c02', name: 'Algoritmo de Minería Simple', description: '+2% a la producción de todos los materiales.', rarity: 'common', effect: { type: 'prod_all', value: 1.02 } },
+            { id: 'u01', name: 'Optimizador de Carga', description: '+7% a la producción de todos los materiales.', rarity: 'uncommon', effect: { type: 'prod_all', value: 1.07 } },
+            { id: 'u02', name: 'Enfriador de Taladro Básico', description: '+15% a la producción de Cristales de Hielo.', rarity: 'uncommon', effect: { type: 'prod_single', material: 'IceCrystals', value: 1.15 } },
+            { id: 'r01', name: 'IA de Logística Avanzada', description: 'Reduce el coste de desbloqueo de planetas en un 10%.', rarity: 'rare', effect: { type: 'travel_cost', value: 0.90 } },
+            { id: 'r02', name: 'Software de Corretaje Avanzado', description: '+20% a las ganancias por ventas.', rarity: 'rare', effect: { type: 'sell_all', value: 1.20 } },
+            { id: 'l01', name: 'Archivos de la Humanidad Perdida', planet: 'Terra', description: 'Antiguos datos terrestres. Otorga $10,000 créditos al instante.', rarity: 'legendary', effect: { type: 'grant_money', value: 10000 } },
+            { id: 'l02', name: 'Corazón de Forja Marciano', planet: 'Mars', description: 'Un núcleo de energía de antiguas forjas. +200% a la producción de Mineral de Asteroide.', rarity: 'legendary', effect: { type: 'prod_single', material: 'AsteroidOre', value: 3.0 } },
+            { id: 'l03', name: 'Matriz Geotérmica', planet: 'Europa', description: 'Tecnología para licuar lunas heladas. +200% a la producción de Cristales de Hielo.', rarity: 'legendary', effect: { type: 'prod_single', material: 'IceCrystals', value: 3.0 } },
+            { id: 'l04', name: 'Núcleo de Singularidad', planet: 'Kepler186f', description: 'Un objeto de poder incomprensible. Duplica todas las ganancias por ventas.', rarity: 'legendary', effect: { type: 'sell_all', value: 2.0 } },
+            { id: 'l05', name: 'Esquema de Dron de Combate', source: 'pvp', description: 'Desbloquea la capacidad de construir drones de ataque en tu base.', rarity: 'legendary', effect: { type: 'unlock_pvp_unit' } }
         ]
     };
     
-    // --- ESTADO Y DOM ---
     let gameState = {};
     let marketPrices = {};
     const moneyCountEl = document.getElementById('money-count'), 
@@ -63,9 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
           upgradesListEl = document.getElementById('upgrades-list'), 
           marketListEl = document.getElementById('market-list'), 
           travelListEl = document.getElementById('travel-list'), 
-          loadingOverlay = document.getElementById('loading-overlay');
+          loadingOverlay = document.getElementById('loading-overlay'),
+          travelOverlay = document.getElementById('travel-overlay');
 
-    // --- SISTEMA DE GUARDADO ---
     let saveTimeout;
     function requestSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(saveGame, 2000); }
     function saveGame() { 
@@ -77,23 +80,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- LÓGICA DE LA INTERFAZ (UI) ---
     function getDefaultState() { 
         return { 
-            money: 200, 
-            currentPlanet: 'Terra', 
+            money: 200, currentPlanet: 'Terra', 
             inventory: Object.keys(CONFIG.MATERIALS).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), 
             upgradeLevels: Object.keys(CONFIG.UPGRADES).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), 
-            modules: [], 
-            unlockedPlanets: ['Terra'], 
-            lastLogin: null, 
-            achievedMissions: [], 
-            completedMissions: [],
-            dailyMissionProgress: {},
-            completedDailyMissions: [],
+            modules: [], unlockedPlanets: ['Terra'], lastLogin: null, 
+            achievedMissions: [], completedMissions: [],
+            dailyMissionProgress: {}, completedDailyMissions: [],
             baseLevels: { Defenses: 0, Attacks: 0 },
-            notifications: [],
-            alliance: null 
+            notifications: [], alliance: null 
         }; 
     }
     
@@ -112,88 +108,113 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         travelListEl.innerHTML = Object.entries(CONFIG.PLANETS).map(([key, planet]) => { 
-            if (planet.requiresMap && !gameState.modules.some(m => m.effect.type === 'unlock_planet' && m.effect.planet === key)) {
-                return ''; // No mostrar el planeta si requiere mapa y no se tiene
+            if (planet.requiresMap && !(gameState.modules || []).some(m => m.effect.type === 'unlock_planet' && m.effect.planet === key)) {
+                return '';
             }
             const isUnlocked = gameState.unlockedPlanets.includes(key); 
-            const cost = planet.travelCost; 
+            let travelCost = planet.travelCost;
+            (gameState.modules || []).forEach(m => { if (m.effect.type === 'travel_cost') travelCost *= m.effect.value; });
+            const cost = Math.ceil(travelCost); 
             return `<button onclick="travelToPlanet('${key}')" class="travel-btn ${gameState.currentPlanet === key ? 'disabled' : ''}">${isUnlocked ? `Viajar a ${planet.name}` : `Desbloquear ruta a ${planet.name} <span class='travel-cost'>($${cost.toLocaleString()})</span>`}</button>`; 
         }).join('');
         
         modulesListEl.innerHTML = (gameState.modules || []).map(module => `<div class="resource-line module-item"><div class="module-info"><h4 class="item-rarity ${module.rarity}">${module.name}</h4><p>${module.description}</p></div></div>`).join('') || "<p>No hay módulos instalados.</p>";
     }
 
-    // --- ACCIONES DEL JUGADOR ---
     window.sellMaterial = (key, amount) => {
         let amountToSell = (amount === 'all') ? Math.floor(gameState.inventory[key]) : parseInt(amount, 10);
         if (gameState.inventory[key] >= amountToSell && amountToSell > 0) {
             const material = CONFIG.MATERIALS[key];
-            const modifier = marketPrices[gameState.currentPlanet][key] || 1;
+            const modifier = marketPrices[gameState.currentPlanet]?.[key] || 1;
             let price = material.baseValue * modifier;
             (gameState.modules || []).forEach(m => { if (m.effect.type === 'sell_all') price *= m.effect.value; });
-            
             const earnings = price * amountToSell;
             gameState.inventory[key] -= amountToSell;
             gameState.money += earnings;
-
             if (!gameState.dailyMissionProgress) gameState.dailyMissionProgress = {};
             gameState.dailyMissionProgress[`sell_${key}`] = (gameState.dailyMissionProgress[`sell_${key}`] || 0) + amountToSell;
             gameState.dailyMissionProgress['earn'] = (gameState.dailyMissionProgress['earn'] || 0) + earnings;
-
+            if (Math.random() < 1 / 750) { findModule('sell'); }
             requestSave();
         }
     };
+
     window.buyUpgrade = (key) => { const upgrade = CONFIG.UPGRADES[key]; const cost = Math.ceil(upgrade.cost * Math.pow(1.15, (gameState.upgradeLevels[key] || 0))); if (gameState.money >= cost) { gameState.money -= cost; gameState.upgradeLevels[key]++; requestSave(); } };
-    window.travelToPlanet = (key) => { if (gameState.currentPlanet === key) return; const isUnlocked = gameState.unlockedPlanets.includes(key); if (isUnlocked) { gameState.currentPlanet = key; requestSave(); } else { const cost = CONFIG.PLANETS[key].travelCost; if (gameState.money >= cost) { gameState.money -= cost; gameState.unlockedPlanets.push(key); gameState.currentPlanet = key; if (!gameState.achievedMissions.includes('M03') && key === 'Mars') { gameState.achievedMissions.push('M03'); alert(`¡Misión Actualizada! Has completado el objetivo de "Viajero Frecuente".`); } requestSave(); } else { alert(`Créditos insuficientes para desbloquear esta ruta. Necesitas $${cost.toLocaleString()}.`); } } };
+    
+    window.travelToPlanet = (key) => {
+        if (gameState.currentPlanet === key) return;
+        const travelAction = () => {
+            travelOverlay.classList.remove('hidden');
+            setTimeout(() => travelOverlay.classList.add('visible'), 10);
+            setTimeout(() => {
+                gameState.currentPlanet = key;
+                requestSave();
+                updateUI();
+                travelOverlay.classList.remove('visible');
+                setTimeout(() => travelOverlay.classList.add('hidden'), 500);
+            }, 2500);
+        };
+        const isUnlocked = gameState.unlockedPlanets.includes(key);
+        if (isUnlocked) {
+            travelAction();
+        } else {
+            let travelCost = CONFIG.PLANETS[key].travelCost;
+            (gameState.modules || []).forEach(m => { if (m.effect.type === 'travel_cost') travelCost *= m.effect.value; });
+            const cost = Math.ceil(travelCost);
+            if (gameState.money >= cost) {
+                if (confirm(`¿Desbloquear la ruta a ${CONFIG.PLANETS[key].name} por $${cost.toLocaleString()}?`)) {
+                    gameState.money -= cost;
+                    gameState.unlockedPlanets.push(key);
+                    if (!gameState.achievedMissions.includes('M03') && key === 'Mars') {
+                        gameState.achievedMissions.push('M03');
+                        alert(`¡Misión Actualizada! Has completado el objetivo de "Viajero Frecuente".`);
+                    }
+                    travelAction();
+                }
+            } else {
+                alert(`Créditos insuficientes para desbloquear esta ruta. Necesitas $${cost.toLocaleString()}.`);
+            }
+        }
+    };
 
-    // --- LÓGICA DEL JUEGO ---
-    function checkForModuleDrop(planetKey) {
-        const PLANET_ARTIFACT_CHANCE = 1 / 20000;
-        const REGULAR_MODULE_CHANCE = 1 / 1000;
+    function findModule(source) {
+        const roll = Math.random() * 10000;
+        let foundModule = null;
+        if (source === 'production') {
+            if (roll < 20) { foundModule = CONFIG.MODULES.find(m => m.id === 'u01'); } 
+            else if (roll < 200) { foundModule = CONFIG.MODULES.find(m => m.id === 'c02'); }
+        } else if (source === 'sell') {
+            if (roll < 10) { foundModule = CONFIG.MODULES.find(m => m.id === 'r02'); } 
+            else if (roll < 100) { foundModule = CONFIG.MODULES.find(m => m.id === 'u02'); }
+        }
+        if (foundModule) { const newModule = { ...foundModule, id: `mod_${Date.now()}` }; gameState.modules.push(newModule); alert(`¡Descubrimiento Afortunado!\n\nHas encontrado: ${newModule.name} (${newModule.rarity})`); requestSave(); }
+    }
 
+    function checkForPlanetArtifact(planetKey) {
+        const PLANET_ARTIFACT_CHANCE = 1 / 25000;
         if (Math.random() < PLANET_ARTIFACT_CHANCE) {
             const planetArtifact = CONFIG.MODULES.find(m => m.planet === planetKey);
-            if (planetArtifact && !gameState.modules.some(m => m.id === planetArtifact.id)) {
+            if (planetArtifact && !(gameState.modules || []).some(m => m.id === planetArtifact.id)) {
                 const newModule = { ...planetArtifact, id: `mod_${Date.now()}` };
                 gameState.modules.push(newModule);
                 alert(`\n\n¡¡¡HALLAZGO ÚNICO!!!\n\nExplorando ${CONFIG.PLANETS[planetKey].name}, has encontrado un artefacto legendario: ${newModule.name}.\n\n`);
                 if (newModule.effect.type === 'grant_money') { gameState.money += newModule.effect.value; }
                 requestSave();
-                return;
             }
-        }
-        
-        if (Math.random() < REGULAR_MODULE_CHANCE) {
-            const regularModules = CONFIG.MODULES.filter(m => !m.planet);
-            const randomModule = regularModules[Math.floor(Math.random() * regularModules.length)];
-            const newModule = { ...randomModule, id: `mod_${Date.now()}` };
-            gameState.modules.push(newModule);
-            alert(`¡Descubrimiento Afortunado!\n\nHas encontrado un módulo de nave: ${newModule.name} (${newModule.rarity})`);
-            requestSave();
         }
     }
     
-    function calculateProduction() {
-        const production = {};
-        for (const key in CONFIG.UPGRADES) { const upgrade = CONFIG.UPGRADES[key]; const level = gameState.upgradeLevels[key] || 0; if (level > 0) { for (const material in upgrade.baseProd) { production[material] = (production[material] || 0) + (upgrade.baseProd[material] * level); } } }
-        (gameState.modules || []).forEach(module => { if (module.effect.type === 'prod_all') { for (const mat in production) { production[mat] *= module.effect.value; } } else if (module.effect.type === 'prod_single') { if (production[module.effect.material]) { production[module.effect.material] *= module.effect.value; } } });
-        return production;
-    }
-
+    function calculateProduction() { const production = {}; for (const key in CONFIG.UPGRADES) { const upgrade = CONFIG.UPGRADES[key]; const level = gameState.upgradeLevels[key] || 0; if (level > 0) { for (const material in upgrade.baseProd) { production[material] = (production[material] || 0) + (upgrade.baseProd[material] * level); } } } (gameState.modules || []).forEach(module => { if (module.effect.type === 'prod_all') { for (const mat in production) { production[mat] *= module.effect.value; } } else if (module.effect.type === 'prod_single') { if (production[module.effect.material]) { production[module.effect.material] *= module.effect.value; } } }); return production; }
+    
     function gameLoop() {
         const production = calculateProduction();
-        let productionChance = 0;
-        for (const material in production) {
-            productionChance += production[material];
-            gameState.inventory[material] += production[material] / 10;
-        }
-        if (productionChance > 0 && Math.random() < productionChance / 50) {
-            checkForModuleDrop(gameState.currentPlanet);
-        }
+        for (const material in production) { gameState.inventory[material] += production[material] / 10; }
+        if (Math.random() < 1 / 1500) { findModule('production'); }
+        let artifactProduction = (production['AlienArtifacts'] || 0);
+        if (artifactProduction > 0 && Math.random() < (artifactProduction / 10)) { checkForPlanetArtifact(gameState.currentPlanet); }
         updateUI();
     }
     
-    // --- LÓGICA DE INICIALIZACIÓN ROBUSTA ---
     auth.onAuthStateChanged(user => { if (user) { initializeGame(); } else { window.location.href = 'menu.html'; } });
     async function initializeGame() {
         loadingOverlay.classList.remove('hidden');
@@ -206,37 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingOverlay.classList.add('hidden');
     }
 
-    async function loadGame() {
-        const user = auth.currentUser;
-        if (!user) { gameState = getDefaultState(); return; }
-        const docRef = db.collection('players').doc(user.uid);
-        const doc = await docRef.get();
-        gameState = doc.exists ? { ...getDefaultState(), ...doc.data() } : getDefaultState();
-    }
-
-    async function loadInitialMarketPrices() {
-        try {
-            const doc = await db.collection('marketState').doc('globalPrices').get();
-            if (doc.exists) { marketPrices = doc.data(); } 
-            else { throw new Error("Doc no existe"); }
-        } catch (error) {
-            console.warn("Precios no encontrados, usando valores por defecto.", error);
-            const defaultPrices = {};
-            for (const planetKey in CONFIG.PLANETS) {
-                if (!CONFIG.PLANETS[planetKey].requiresMap) { // Solo para planetas base
-                    defaultPrices[planetKey] = {};
-                    for (const materialKey in CONFIG.MATERIALS) {
-                        defaultPrices[planetKey][materialKey] = 1.0;
-                    }
-                }
-            }
-            marketPrices = defaultPrices;
-        }
-    }
-
-    function listenForMarketUpdates() {
-        db.collection('marketState').doc('globalPrices').onSnapshot((doc) => {
-            if (doc.exists) { marketPrices = doc.data(); }
-        });
-    }
+    async function loadGame() { const user = auth.currentUser; if (!user) { gameState = getDefaultState(); return; } const docRef = db.collection('players').doc(user.uid); const doc = await docRef.get(); gameState = doc.exists ? { ...getDefaultState(), ...doc.data() } : getDefaultState(); }
+    async function loadInitialMarketPrices() { try { const doc = await db.collection('marketState').doc('globalPrices').get(); if (doc.exists) { marketPrices = doc.data(); } else { throw new Error("Doc no existe"); } } catch (error) { console.warn("Precios no encontrados, usando valores por defecto.", error); const defaultPrices = {}; for (const planetKey in CONFIG.PLANETS) { if (!CONFIG.PLANETS[planetKey].requiresMap) { defaultPrices[planetKey] = {}; for (const materialKey in CONFIG.MATERIALS) { defaultPrices[planetKey][materialKey] = 1.0; } } } marketPrices = defaultPrices; } }
+    function listenForMarketUpdates() { db.collection('marketState').doc('globalPrices').onSnapshot((doc) => { if (doc.exists) { marketPrices = doc.data(); } }); }
 });

@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("BASE: MODO DE PRUEBA LOCAL DETECTADO. CONECTANDO A EMULADORES...");
         auth.useEmulator("http://localhost:9099");
         db.useEmulator("localhost", 8080);
-        // No se necesita emulador de functions para esta versión
     }
 
     // --- CONFIGURACIÓN Y SELECTORES ---
@@ -78,9 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const level = gameState.baseLevels[key] || 0;
         const cost = Math.ceil(BASE_CONFIG.UPGRADES[key].cost * Math.pow(1.5, level));
         if (gameState.money >= cost) {
-            gameState.money -= cost;
-            gameState.baseLevels[key] = level + 1;
-            db.collection('players').doc(auth.currentUser.uid).update({ 
+            db.collection('players').doc(auth.currentUser.uid).update({
                 [`baseLevels.${key}`]: firebase.firestore.FieldValue.increment(1),
                 money: firebase.firestore.FieldValue.increment(-cost)
             });
@@ -151,18 +148,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- LÓGICA DE ALIANZAS ---
     window.createAlliance = async () => {
         if (gameState.alliance) { alert("Ya perteneces a una alianza."); return; }
-        const name = prompt("Nombre para tu nueva alianza:");
-        if (name && name.trim().length > 2) {
-            const allianceRef = db.collection('alliances').doc(name);
+        const name = prompt("Nombre para tu nueva alianza (3-15 caracteres):");
+        if (name && name.trim().length >= 3 && name.trim().length <= 15) {
+            const allianceName = name.trim();
+            const allianceRef = db.collection('alliances').doc(allianceName);
             const doc = await allianceRef.get();
             if (doc.exists) { alert("Una alianza con este nombre ya existe."); return; }
             await allianceRef.set({ leader: currentUser.uid, members: [{ id: currentUser.uid, name: currentUser.displayName }] });
-            await db.collection('players').doc(currentUser.uid).update({ alliance: name });
+            await db.collection('players').doc(currentUser.uid).update({ alliance: allianceName });
         } else {
-            alert("El nombre de la alianza es demasiado corto o inválido.");
+            alert("El nombre de la alianza es inválido.");
         }
     };
 
@@ -186,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
         await allianceRef.update({ members: firebase.firestore.FieldValue.arrayRemove({ id: currentUser.uid, name: currentUser.displayName }) });
     };
     
-    // --- CARGA DE DATOS Y NOTIFICACIONES ---
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
@@ -194,26 +190,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadingOverlay.classList.add('hidden');
                 if (doc.exists) {
                     gameState = doc.data();
-                    if (!gameState.baseLevels) gameState.baseLevels = { Defenses: 0, Attacks: 0 };
-                    if (!gameState.notifications) gameState.notifications = [];
-                    
-                    const unreadNotifications = gameState.notifications.filter(n => !n.read);
-                    if (unreadNotifications.length > 0) {
-                        let notificationMessages = "NUEVOS REPORTES DE COMBATE:\n\n";
-                        unreadNotifications.forEach(n => {
-                            notificationMessages += `- ${n.message}\n`;
-                            const notifIndex = gameState.notifications.findIndex(item => item.id === n.id);
-                            if (notifIndex > -1) { gameState.notifications[notifIndex].read = true; }
-                        });
-                        alert(notificationMessages);
-                        db.collection('players').doc(user.uid).update({ notifications: gameState.notifications });
-                    }
-                    updateUI();
                 } else {
-                    // Si el jugador no tiene datos (primera vez en la base), se crea un estado por defecto
+                    // Si el jugador no tiene datos, creamos un estado por defecto para evitar errores
                     gameState = { money: 0, baseLevels: { Defenses: 0, Attacks: 0 }, notifications: [], alliance: null };
-                    updateUI();
                 }
+                // Asegurarse de que las propiedades existan en partidas viejas
+                if (!gameState.baseLevels) gameState.baseLevels = { Defenses: 0, Attacks: 0 };
+                if (!gameState.notifications) gameState.notifications = [];
+                
+                const unreadNotifications = gameState.notifications.filter(n => !n.read);
+                if (unreadNotifications.length > 0) {
+                    let notificationMessages = "NUEVOS REPORTES DE COMBATE:\n\n";
+                    unreadNotifications.forEach(n => {
+                        notificationMessages += `- ${n.message}\n`;
+                        const notifIndex = gameState.notifications.findIndex(item => item.id === n.id);
+                        if (notifIndex > -1) { gameState.notifications[notifIndex].read = true; }
+                    });
+                    alert(notificationMessages);
+                    db.collection('players').doc(user.uid).update({ notifications: gameState.notifications });
+                }
+                
+                updateUI();
             }, (error) => {
                 console.error("Error al cargar datos del jugador: ", error);
                 loadingOverlay.classList.add('hidden');

@@ -21,18 +21,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const MISSIONS = [
-        { id: 'M00', title: 'Conexión Diaria', description: 'Inicia sesión por primera vez hoy.', requirement: { type: 'daily_login' }, reward: 250 },
-        { id: 'M01', title: 'Aspirante a Capitalista', description: 'Acumula una fortuna total de $5,000 créditos.', requirement: { type: 'money', value: 5000 }, reward: 1000 },
-        { id: 'M02', title: 'Inversor Inicial', description: 'Mejora los Drones de Minería al nivel 5.', requirement: { type: 'upgrade', key: 'Drones', level: 5 }, reward: 750 },
-        { id: 'M03', title: 'Viajero Frecuente', description: 'Desbloquea la ruta de viaje a Marte.', requirement: { type: 'travel', planet: 'Mars' }, reward: 500 },
-        { id: 'M04', title: 'Magnate Espacial', description: 'Acumula una fortuna total de $50,000 créditos.', requirement: { type: 'money', value: 50000 }, reward: 5000 },
+        { id: 'D01', type: 'daily', title: 'Contrato de Helio', description: 'Vende 1,000 de Helio-3.', requirement: { type: 'sell', material: 'Helium3', value: 1000 }, reward: 750 },
+        { id: 'D02', type: 'daily', title: 'Comerciante Activo', description: 'Gana $10,000 créditos vendiendo recursos.', requirement: { type: 'earn', value: 10000 }, reward: 1500 },
+        { id: 'M01', type: 'main', title: 'Aspirante a Capitalista', description: 'Acumula una fortuna total de $25,000 créditos.', requirement: { type: 'money', value: 25000 }, reward: 2500 },
+        { id: 'M02', type: 'main', title: 'Inversor Inicial', description: 'Mejora los Drones de Minería al nivel 10.', requirement: { type: 'upgrade', key: 'Drones', level: 10 }, reward: 1500 },
+        { id: 'M03', type: 'main', title: 'Viajero Frecuente', description: 'Desbloquea la ruta de viaje a Marte.', requirement: { type: 'travel', planet: 'Mars' }, reward: 1000 },
+        { id: 'M04', type: 'main', title: 'Magnate Espacial', description: 'Acumula una fortuna total de $250,000 créditos.', requirement: { type: 'money', value: 250000 }, reward: 10000 },
+        { id: 'M05', type: 'main', title: 'Maestro de la Logística', description: 'Mejora las Fragatas de Carga al nivel 15.', requirement: { type: 'upgrade', key: 'Frigates', level: 15 }, reward: 7500 },
+        { id: 'M06', type: 'main', title: 'Explorador de Mundos de Hielo', description: 'Desbloquea la ruta de viaje a Europa.', requirement: { type: 'travel', planet: 'Europa'}, reward: 5000},
     ];
-
+    
     const iconLogin = `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>`;
     const iconLogout = `<svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"></path></svg>`;
     
     let playerData = null;
 
+    // --- CORRECCIÓN: Declaración de todas las variables del DOM juntas ---
     const authModal = document.getElementById('auth-modal'), missionsModal = document.getElementById('missions-modal'), creditsModal = document.getElementById('credits-modal'), leaderboardModal = document.getElementById('leaderboard-modal'), marketModal = document.getElementById('market-modal');
     const missionsBtn = document.getElementById('missions-btn'), missionsList = document.getElementById('missions-list');
     const adminKeyInput = document.getElementById('admin-key-input'), adminPanel = document.getElementById('admin-panel'), deleteDataBtn = document.getElementById('delete-data-btn'), deleteAccountsBtn = document.getElementById('delete-accounts-btn');
@@ -58,8 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
     showRegisterLink.addEventListener('click', (e) => { e.preventDefault(); clearAuthErrors(); loginForm.classList.add('hidden'); registerForm.classList.remove('hidden'); });
     showLoginLink.addEventListener('click', (e) => { e.preventDefault(); clearAuthErrors(); registerForm.classList.add('hidden'); loginForm.classList.remove('hidden'); });
     adminKeyInput.addEventListener('input', (e) => { e.target.value === ADMIN_KEY ? adminPanel.classList.remove('hidden') : adminPanel.classList.add('hidden'); });
-    deleteDataBtn.addEventListener('click', () => { if (prompt(`ACCIÓN IRREVERSIBLE.\n\nEscribe: "${CONFIRM_DELETE_DATA}"`) === CONFIRM_DELETE_DATA) { alert("Confirmación recibida.\nACCIÓN SIMULADA.\nEjecuta la Cloud Function 'deleteAllPlayerData'."); } else { alert("Confirmación incorrecta. Operación cancelada."); } });
-    deleteAccountsBtn.addEventListener('click', () => { if (prompt(`MÁXIMA ALERTA.\n\nEscribe: "${CONFIRM_DELETE_ACCOUNTS}"`) === CONFIRM_DELETE_ACCOUNTS) { alert("Confirmación final recibida.\nACCIÓN SIMULADA.\nEjecuta la Cloud Function 'deleteAllUsers'."); } else { alert("Confirmación incorrecta. Operación cancelada."); } });
+    deleteDataBtn.addEventListener('click', () => { if (prompt(`ACCIÓN IRREVERSIBLE.\n\nEscribe: "${CONFIRM_DELETE_DATA}"`) === CONFIRM_DELETE_DATA) { alert("Confirmación recibida.\nACCIÓN SIMULADA."); } else { alert("Confirmación incorrecta. Operación cancelada."); } });
+    deleteAccountsBtn.addEventListener('click', () => { if (prompt(`MÁXIMA ALERTA.\n\nEscribe: "${CONFIRM_DELETE_ACCOUNTS}"`) === CONFIRM_DELETE_ACCOUNTS) { alert("Confirmación final recibida.\nACCIÓN SIMULADA."); } else { alert("Confirmación incorrecta. Operación cancelada."); } });
 
     function showAuthError(message, type) { const element = type === 'login' ? loginErrorMsg : registerErrorMsg; element.textContent = message; element.style.display = 'block'; }
     function clearAuthErrors() { loginErrorMsg.style.display = 'none'; registerErrorMsg.style.display = 'none'; }
@@ -91,85 +95,78 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchPlayerData() { if (!auth.currentUser) return; const doc = await db.collection('players').doc(auth.currentUser.uid).get(); if (doc.exists) playerData = doc.data(); }
 
     function checkDailyLogin() {
-        if (!playerData) return;
+        if (!playerData || !auth.currentUser) return;
         const today = new Date().toISOString().slice(0, 10);
         const lastLogin = playerData.lastLogin;
 
         if (lastLogin !== today) {
-            const dailyMission = MISSIONS.find(m => m.requirement.type === 'daily_login');
-            if(dailyMission) {
-                playerData.money = (playerData.money || 0) + dailyMission.reward;
-                playerData.lastLogin = today;
-                db.collection('players').doc(auth.currentUser.uid).update({ money: playerData.money, lastLogin: playerData.lastLogin });
-                alert(`¡Bienvenido de nuevo, ${auth.currentUser.displayName || 'Piloto'}!\n\nHas recibido ${dailyMission.reward} créditos por tu bonus de conexión diaria.`);
-            }
+            playerData.money = (playerData.money || 0) + 250;
+            playerData.lastLogin = today;
+            playerData.dailyMissionProgress = {}; 
+            playerData.completedDailyMissions = [];
+            
+            db.collection('players').doc(auth.currentUser.uid).update({
+                money: playerData.money,
+                lastLogin: playerData.lastLogin,
+                dailyMissionProgress: playerData.dailyMissionProgress,
+                completedDailyMissions: playerData.completedDailyMissions
+            });
+            alert(`¡Bienvenido de nuevo, ${auth.currentUser.displayName || 'Piloto'}!\n\nHas recibido 250 créditos por tu bonus de conexión diaria.\n¡Tus misiones diarias se han reiniciado!`);
         }
     }
-
+    
     async function renderMissions() {
         if (!playerData) await fetchPlayerData();
         if (!playerData) { missionsList.innerHTML = "<p>No se pudieron cargar los datos del jugador.</p>"; return; }
 
         playerData.completedMissions = playerData.completedMissions || [];
         playerData.achievedMissions = playerData.achievedMissions || [];
+        playerData.dailyMissionProgress = playerData.dailyMissionProgress || {};
+        playerData.completedDailyMissions = playerData.completedDailyMissions || [];
 
-        missionsList.innerHTML = MISSIONS.map(mission => {
-            if (mission.requirement.type === 'daily_login') return '';
-            const isClaimed = playerData.completedMissions.includes(mission.id);
-            let progress = 0;
-            let progressText = "";
-            let isAchieved = false;
+        const renderMission = (mission, isDaily) => {
+            const completedList = isDaily ? playerData.completedDailyMissions : playerData.completedMissions;
+            const isClaimed = completedList.includes(mission.id);
+            let progress = 0, progressText = "", isAchieved = false;
 
             switch (mission.requirement.type) {
-                case 'money':
-                    progress = Math.min(100, ((playerData.money || 0) / mission.requirement.value) * 100);
-                    progressText = `$${Math.floor(playerData.money || 0).toLocaleString()} / $${mission.requirement.value.toLocaleString()}`;
-                    break;
-                case 'upgrade':
-                    const currentLevel = (playerData.upgradeLevels && playerData.upgradeLevels[mission.requirement.key]) || 0;
-                    progress = Math.min(100, (currentLevel / mission.requirement.level) * 100);
-                    progressText = `Nivel ${currentLevel} / Nivel ${mission.requirement.level}`;
-                    break;
-                case 'travel':
-                    isAchieved = playerData.achievedMissions.includes(mission.id);
-                    progress = isAchieved ? 100 : 0;
-                    progressText = isAchieved ? "Destino alcanzado" : "Pendiente";
-                    break;
+                case 'money': progress = Math.min(100, ((playerData.money || 0) / mission.requirement.value) * 100); progressText = `$${Math.floor(playerData.money || 0).toLocaleString()} / $${mission.requirement.value.toLocaleString()}`; break;
+                case 'upgrade': const currentLevel = (playerData.upgradeLevels && playerData.upgradeLevels[mission.requirement.key]) || 0; progress = Math.min(100, (currentLevel / mission.requirement.level) * 100); progressText = `Nivel ${currentLevel} / Nivel ${mission.requirement.level}`; break;
+                case 'travel': isAchieved = playerData.achievedMissions.includes(mission.id); progress = isAchieved ? 100 : 0; progressText = isAchieved ? "Destino alcanzado" : "Pendiente"; break;
+                case 'sell': const soldAmount = playerData.dailyMissionProgress[`sell_${mission.requirement.material}`] || 0; progress = Math.min(100, (soldAmount / mission.requirement.value) * 100); progressText = `${soldAmount.toLocaleString()} / ${mission.requirement.value.toLocaleString()}`; break;
+                case 'earn': const earnedAmount = playerData.dailyMissionProgress['earn'] || 0; progress = Math.min(100, (earnedAmount / mission.requirement.value) * 100); progressText = `$${Math.floor(earnedAmount).toLocaleString()} / $${mission.requirement.value.toLocaleString()}`; break;
             }
             
             isAchieved = progress >= 100;
             const canClaim = isAchieved && !isClaimed;
             let missionClass = isClaimed ? 'claimed' : (canClaim ? 'achieved' : '');
 
-            return `<div class="mission-item ${missionClass}"><div class="mission-header"><h3 class="mission-title">${mission.title}</h3><span class="mission-reward">Recompensa: $${mission.reward.toLocaleString()}</span></div><p class="mission-description">${mission.description}</p><div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%;"></div></div><p class="progress-text">${progressText}</p><button class="claim-btn ${isClaimed ? 'claimed-style' : ''}" onclick="claimMissionReward('${mission.id}')" ${!canClaim ? 'disabled' : ''}>${isClaimed ? 'Reclamado' : (canClaim ? 'Reclamar' : 'En Progreso')}</button></div>`;
-        }).join('');
+            return `<div class="mission-item ${missionClass}"><div class="mission-header"><h3 class="mission-title">${mission.title}</h3><span class="mission-reward">Recompensa: $${mission.reward.toLocaleString()}</span></div><p class="mission-description">${mission.description}</p><div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%;"></div></div><p class="progress-text">${progressText}</p><button class="claim-btn ${isClaimed ? 'claimed-style' : ''}" onclick="claimMissionReward('${mission.id}', ${isDaily})" ${!canClaim ? 'disabled' : ''}>${isClaimed ? 'Reclamado' : (canClaim ? 'Reclamar' : 'En Progreso')}</button></div>`;
+        };
+        
+        const dailyMissionsHTML = MISSIONS.filter(m => m.type === 'daily').map(m => renderMission(m, true)).join('');
+        const mainMissionsHTML = MISSIONS.filter(m => m.type === 'main').map(m => renderMission(m, false)).join('');
+
+        missionsList.innerHTML = `<h3 class="missions-divider">Misiones Diarias</h3>${dailyMissionsHTML || "<p>No hay misiones diarias disponibles.</p>"}<h3 class="missions-divider">Misiones Principales</h3>${mainMissionsHTML || "<p>Has completado todas las misiones principales.</p>"}`;
     }
 
-    window.claimMissionReward = (missionId) => {
+    window.claimMissionReward = (missionId, isDaily) => {
         if (!playerData || !auth.currentUser) return;
         const mission = MISSIONS.find(m => m.id === missionId);
-        if (!mission || playerData.completedMissions.includes(missionId)) return;
+        const completedListKey = isDaily ? 'completedDailyMissions' : 'completedMissions';
+        if (!mission || playerData[completedListKey].includes(missionId)) return;
 
-        let isAchieved = false;
-        switch (mission.requirement.type) {
-            case 'money': isAchieved = (playerData.money || 0) >= mission.requirement.value; break;
-            case 'upgrade': isAchieved = ((playerData.upgradeLevels && playerData.upgradeLevels[mission.requirement.key]) || 0) >= mission.requirement.level; break;
-            case 'travel': isAchieved = (playerData.achievedMissions || []).includes(mission.id); break;
-        }
-
-        if (isAchieved) {
-            playerData.completedMissions.push(mission.id);
-            playerData.money += mission.reward;
-            db.collection('players').doc(auth.currentUser.uid).update({ completedMissions: playerData.completedMissions, money: playerData.money })
-                .then(() => { alert(`¡Recompensa de $${mission.reward.toLocaleString()} reclamada!`); renderMissions(); })
-                .catch(error => { console.error("Error al reclamar la misión:", error); });
-        }
+        playerData[completedListKey].push(mission.id);
+        playerData.money += mission.reward;
+        db.collection('players').doc(auth.currentUser.uid).update({ [completedListKey]: playerData[completedListKey], money: playerData.money })
+            .then(() => { alert(`¡Recompensa de $${mission.reward.toLocaleString()} reclamada!`); renderMissions(); })
+            .catch(error => console.error("Error al reclamar:", error));
     };
 
     marketBuyTab.addEventListener('click', () => { marketBuyTab.classList.add('active'); marketSellTab.classList.remove('active'); marketBuyView.classList.remove('hidden'); marketSellView.classList.add('hidden'); loadMarketplace(); });
     marketSellTab.addEventListener('click', () => { marketSellTab.classList.add('active'); marketBuyTab.classList.remove('active'); marketSellView.classList.remove('hidden'); marketBuyView.classList.add('hidden'); loadPlayerModulesForSale(); });
-    async function loadMarketplace() { marketBuyView.innerHTML = "<p>El mercado está actualmente fuera de línea mientras se implementan las Cloud Functions de transacción segura.</p>"; }
-    function loadPlayerModulesForSale() { marketSellView.innerHTML = "<p>Cargando tu inventario de módulos...</p>"; if (!playerData || !playerData.modules || playerData.modules.length === 0) { marketSellView.innerHTML = "<p>No tienes módulos para vender.</p>"; return; } marketSellView.innerHTML = playerData.modules.map(module => `<div class="market-item"><div class="item-rarity ${module.rarity}">${module.rarity}</div><div class="item-info"><h4>${module.name}</h4><p>${module.description}</p></div><form class="market-sell-form" onsubmit="postItemToMarket(event, '${module.id}')"><input type="number" placeholder="Precio" required min="1"><button type="submit" class="market-sell-btn">Vender</button></form></div>`).join(''); }
-    window.postItemToMarket = (event) => { event.preventDefault(); alert("FUNCIONALIDAD EN DESARROLLO:\nSe requiere una Cloud Function 'postListing' para gestionar la venta de forma segura."); }
-    async function fetchAndDisplayLeaderboard() { leaderboardContainer.innerHTML = '<p>Cargando clasificación...</p>'; const user = auth.currentUser; try { const snapshot = await db.collection('leaderboard').orderBy('money', 'desc').limit(10).get(); if (snapshot.empty) { leaderboardContainer.innerHTML = '<p>Aún no hay nadie en la clasificación. ¡Sé el primero!</p>'; return; } let tableHTML = '<table class="leaderboard-table"><thead><tr><th class="rank">#</th><th class="name">Piloto</th><th class="score">Fortuna</th></tr></thead><tbody>'; let rank = 1; snapshot.forEach(doc => { const data = doc.data(); const isCurrentUser = user && doc.id === user.uid; tableHTML += `<tr class="${isCurrentUser ? 'current-player-row' : ''}"><td class="rank">${rank}</td><td class="name">${data.playerName}</td><td class="score">$${data.money.toLocaleString()}</td></tr>`; rank++; }); tableHTML += '</tbody></table>'; leaderboardContainer.innerHTML = tableHTML; } catch (error) { console.error("Error al obtener la clasificación: ", error); leaderboardContainer.innerHTML = '<p>Error al cargar la clasificación.</p>'; } }
+    async function loadMarketplace() { marketBuyView.innerHTML = "<p>El mercado está actualmente fuera de línea.</p>"; }
+    function loadPlayerModulesForSale() { marketSellView.innerHTML = "<p>Cargando inventario de módulos...</p>"; if (!playerData || !playerData.modules || playerData.modules.length === 0) { marketSellView.innerHTML = "<p>No tienes módulos para vender.</p>"; return; } marketSellView.innerHTML = playerData.modules.map(module => `<div class="market-item"><div class="item-rarity ${module.rarity}">${module.rarity}</div><div class="item-info"><h4>${module.name}</h4><p>${module.description}</p></div><form class="market-sell-form" onsubmit="postItemToMarket(event, '${module.id}')"><input type="number" placeholder="Precio" required min="1"><button type="submit" class="market-sell-btn">Vender</button></form></div>`).join(''); }
+    window.postItemToMarket = (event) => { event.preventDefault(); alert("FUNCIONALIDAD EN DESARROLLO:\nSe requiere una Cloud Function segura para gestionar el mercado."); }
+    async function fetchAndDisplayLeaderboard() { leaderboardContainer.innerHTML = '<p>Cargando clasificación...</p>'; const user = auth.currentUser; try { const snapshot = await db.collection('leaderboard').orderBy('money', 'desc').limit(10).get(); if (snapshot.empty) { leaderboardContainer.innerHTML = '<p>Aún no hay nadie en la clasificación.</p>'; return; } let tableHTML = '<table class="leaderboard-table"><thead><tr><th class="rank">#</th><th class="name">Piloto</th><th class="score">Fortuna</th></tr></thead><tbody>'; let rank = 1; snapshot.forEach(doc => { const data = doc.data(); const isCurrentUser = user && doc.id === user.uid; tableHTML += `<tr class="${isCurrentUser ? 'current-player-row' : ''}"><td class="rank">${rank}</td><td class="name">${data.playerName}</td><td class="score">$${data.money.toLocaleString()}</td></tr>`; rank++; }); tableHTML += '</tbody></table>'; leaderboardContainer.innerHTML = tableHTML; } catch (error) { console.error("Error al obtener la clasificación: ", error); leaderboardContainer.innerHTML = '<p>Error al cargar la clasificación.</p>'; } }
 });
