@@ -1,0 +1,60 @@
+:root {
+    --primary-font: 'Orbitron', sans-serif;
+    --text-color: #e0e0e0;
+    --accent-glow: #00ffff;
+    --background-dark: #0a0a0c;
+    --accent-buy: #f1c40f;
+    --accent-sell: #2ecc71;
+    --accent-danger: #ff4d4d;
+}
+
+body { margin: 0; font-family: var(--primary-font); background-color: var(--background-dark); color: var(--text-color); overflow: hidden; }
+#video-bg { position: fixed; top: 50%; left: 50%; min-width: 100%; min-height: 100%; width: auto; height: auto; transform: translateX(-50%) translateY(-50%); z-index: -3; filter: brightness(0.3) blur(2px); }
+#vignette-overlay, #scanlines-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+#vignette-overlay { z-index: -2; background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 1) 100%); }
+#scanlines-overlay { z-index: -1; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4) 1px, transparent 1px, transparent 3px); }
+#loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--background-dark); display: flex; justify-content: center; align-items: center; z-index: 99; transition: opacity .5s ease-out; }
+#loading-overlay:not(.visible) { opacity: 0; pointer-events: none; }
+.hidden { display: none !important; }
+
+#main-container { display: flex; justify-content: center; align-items: center; height: 100vh; }
+#main-container > div { background: rgba(10, 10, 12, 0.9); padding: 40px; border-radius: 10px; border: 1px solid var(--accent-glow); width: 90%; max-width: 800px; box-shadow: 0 0 40px rgba(0, 255, 255, 0.2); }
+#main-container h2 { text-align: center; margin-top: 0; margin-bottom: 25px; color: var(--accent-glow); }
+.back-to-main-menu-btn { position: absolute; top: 20px; left: 20px; color: var(--accent-glow); text-decoration: none; font-size: 1rem; }
+
+#patrol-menu-container { display: flex; flex-direction: column; gap: 20px; }
+.patrol-menu-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid #444; color: var(--text-color); padding: 20px; text-align: left; cursor: pointer; transition: all 0.3s ease; border-left: 5px solid var(--accent-glow); }
+.patrol-menu-btn:hover { background: rgba(0, 255, 255, 0.1); border-color: var(--accent-glow); }
+.patrol-menu-btn h3 { margin: 0 0 5px; font-family: var(--primary-font); color: var(--accent-glow); font-size: 1.2rem; }
+.patrol-menu-btn p { margin: 0; font-family: sans-serif; opacity: 0.7; }
+
+.back-to-menu-btn { background: none; border: 1px solid #555; color: #999; padding: 5px 10px; cursor: pointer; margin-bottom: 20px; transition: all 0.2s; }
+.back-to-menu-btn:hover { color: #fff; border-color: #fff; }
+#hangar-upgrades-list .upgrade-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #333; }
+#hangar-upgrades-list .upgrade-info { font-family: sans-serif; }
+#hangar-upgrades-list .upgrade-info h4 { margin: 0 0 5px; }
+#hangar-upgrades-list .upgrade-info small { opacity: 0.7; display: block; }
+#hangar-upgrades-list button { font-family: var(--primary-font); background: var(--accent-buy); color: #000; border: none; padding: 8px 15px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; font-weight: bold; }
+#hangar-upgrades-list button:hover { background-color: white; box-shadow: 0 0 10px var(--accent-buy); }
+.exchange-container { text-align: center; font-family: sans-serif; padding: 20px 0; }
+.exchange-container span { color: var(--accent-buy); font-weight: bold; font-size: 1.2rem; }
+.exchange-container button { margin-top: 15px; background: var(--accent-sell); color: #000; border: none; padding: 12px 20px; font-size: 1rem; font-family: var(--primary-font); text-transform: uppercase; cursor: pointer; }
+.exchange-container button:hover { background: white; box-shadow: 0 0 10px var(--accent-sell); }
+.exchange-container hr { border-color: #444; margin: 20px 0; }
+.exchange-container small { opacity: 0.6; }
+
+#gameplay-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 300; display: flex; justify-content: center; align-items: center; }
+#patrol-game-canvas { border: 1px solid var(--accent-glow); touch-action: none; }
+#game-hud { position: absolute; top: 20px; left: 20px; color: #fff; font-family: var(--primary-font); text-shadow: 0 0 5px #000; z-index: 310; }
+#game-hud div { font-size: 1.2rem; margin-bottom: 5px; background: rgba(0,0,0,0.4); padding: 5px 10px; border-radius: 5px;}
+#hud-health span { color: var(--accent-sell); font-weight: bold; }
+#hud-pieces span { color: var(--accent-buy); font-weight: bold; }
+.exit-game-btn { position: absolute; top: 20px; right: 20px; background: var(--accent-danger); color: #fff; border: none; padding: 10px 15px; cursor: pointer; font-family: var(--primary-font); text-transform: uppercase; z-index: 310; }
+
+@media (max-width: 768px) {
+    #main-container > div { padding: 20px; width: 95%; }
+    .back-to-main-menu-btn { top: 15px; left: 15px; }
+    .patrol-menu-btn { padding: 15px; }
+    #patrol-game-canvas { width: 100vw; height: 100vh; border: none; }
+    .exit-game-btn, #game-hud { font-size: 0.9rem; }
+}

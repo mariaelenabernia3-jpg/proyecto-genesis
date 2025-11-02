@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puesto de Mando de Patrullaje</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="menu2.style.css">
+</head>
+<body>
+    <div id="loading-overlay" class="visible"><h1>ACCEDIENDO A PROTOCOLOS DE COMBATE...</h1></div>
+    <div id="vignette-overlay"></div>
+    <div id="scanlines-overlay"></div>
+    <video autoplay muted loop id="video-bg"><source src="https://assets.mixkit.co/videos/preview/mixkit-flying-through-a-glowing-blue-nebula-23426-large.mp4" type="video/mp4"></video>
+
+    <div id="main-container">
+        <a href="menu.html" class="back-to-main-menu-btn">&laquo; VOLVER AL MENÚ PRINCIPAL</a>
+        
+        <div id="patrol-menu-view">
+            <h2>Puesto de Mando de Patrullaje</h2>
+            <div id="patrol-menu-container">
+                <button id="start-patrol-btn" class="patrol-menu-btn"><h3>Iniciar Patrullaje</h3><p>Enfréntate a amenazas y recolecta piezas.</p></button>
+                <button id="hangar-btn" class="patrol-menu-btn"><h3>Hangar</h3><p>Mejora tu nave de combate con créditos.</p></button>
+                <button id="exchange-btn" class="patrol-menu-btn"><h3>Intercambio</h3><p>Canjea piezas por componentes avanzados.</p></button>
+            </div>
+        </div>
+        
+        <div id="hangar-view" class="hidden">
+            <button id="back-to-patrol-menu-hangar" class="back-to-menu-btn">&laquo; Volver</button>
+            <h2>Hangar de Mejoras</h2>
+            <div id="hangar-upgrades-list"><p>Cargando datos de la nave...</p></div>
+        </div>
+        
+        <div id="exchange-view" class="hidden">
+            <button id="back-to-patrol-menu-exchange" class="back-to-menu-btn">&laquo; Volver</button>
+            <h2>Intercambio de Piezas</h2>
+            <div class="exchange-container">
+                <p>Posees <span id="pieces-count">0</span> piezas.</p>
+                <p>100 Piezas &rarr; 1 Componente de Nave Avanzado</p>
+                <button id="exchange-pieces-btn">Intercambiar 100 Piezas</button>
+                <hr>
+                <p>Posees <span id="components-count">0</span> Componentes Avanzados.</p>
+                <small>Cada componente mejora permanentemente tu Ataque y Defensa en la Base.</small>
+            </div>
+        </div>
+    </div>
+
+    <div id="gameplay-overlay" class="hidden">
+        <div id="game-hud">
+            <div id="hud-health">Vida: <span>100/100</span></div>
+            <div id="hud-pieces">Piezas: <span>0</span></div>
+        </div>
+        <canvas id="patrol-game-canvas"></canvas>
+        <button id="exit-patrol-btn" class="exit-game-btn">Abandonar Patrullaje</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+    <script src="menu2.js"></script>
+</body>
+</html>
