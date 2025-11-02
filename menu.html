@@ -10,18 +10,13 @@
     <link rel="stylesheet" href="menu.style.css">
 </head>
 <body>
-    <!-- Capas de Efectos Visuales -->
     <div id="vignette-overlay"></div>
     <div id="scanlines-overlay"></div>
     <video autoplay muted loop id="video-bg"><source src="https://assets.mixkit.co/videos/preview/mixkit-flying-through-a-glowing-blue-nebula-23426-large.mp4" type="video/mp4"></video>
-
-    <!-- Panel de Usuario -->
     <div id="user-panel">
         <div id="user-info" class="hidden"></div>
         <button id="auth-icon-btn" class="auth-icon" title="Iniciar Sesión / Perfil"></button>
     </div>
-
-    <!-- Contenedor Principal del Menú -->
     <div id="menu-container">
         <div class="title-container">
             <h1 class="game-title" data-text="PROYECTO GÉNESIS">PROYECTO GÉNESIS</h1>
@@ -36,91 +31,12 @@
             <a href="#" id="credits-btn" class="nav-button"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"></path></svg><span>Créditos</span></a>
         </nav>
     </div>
-
-    <!-- Etiqueta de Versión -->
-    <div class="version-tag">v0.8.0</div>
-
-    <!-- Modal de Autenticación -->
-    <div id="auth-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-btn">&times;</button>
-            <div id="login-form">
-                <h2>Iniciar Sesión</h2>
-                <p id="login-error-message" class="error-message"></p>
-                <input type="email" id="login-email" placeholder="Correo electrónico" required>
-                <input type="password" id="login-password" placeholder="Contraseña" required>
-                <button id="login-btn">Entrar</button>
-                <p class="auth-switch">¿No tienes cuenta? <a href="#" id="show-register">Regístrate</a></p>
-            </div>
-            <div id="register-form" class="hidden">
-                <h2>Crear Cuenta</h2>
-                <p id="register-error-message" class="error-message"></p>
-                <input type="text" id="register-username" placeholder="Nombre de usuario" required>
-                <input type="email" id="register-email" placeholder="Correo electrónico" required>
-                <input type="password" id="register-password" placeholder="Contraseña" required>
-                <button id="register-btn">Registrar</button>
-                <p class="auth-switch">¿Ya tienes cuenta? <a href="#" id="show-login">Inicia sesión</a></p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Créditos -->
-    <div id="credits-modal" class="modal-overlay hidden">
-        <div class="modal-content credits-content">
-            <button class="close-btn">&times;</button>
-            <h2>Créditos</h2>
-            <p class="credits-main">Todo por</p>
-            <h3 class="credits-logo">DZM Studios</h3>
-            <p class="credits-joke">Este juego fue testeado exhaustivamente por nuestros gatos.<br>Si encuentras un bug, échales la culpa a ellos.</p>
-            <div class="admin-entry">
-                <input type="password" id="admin-key-input" placeholder="Acceso de Administrador...">
-            </div>
-            <div id="admin-panel" class="hidden">
-                <div class="admin-warning">
-                    <h3>PROTOCOLO DE EMERGENCIA: CÓDIGO ROJO</h3>
-                    <p>ADVERTENCIA: Las siguientes acciones son irreversibles y afectarán a todos los jugadores.</p>
-                </div>
-                <div class="admin-actions">
-                    <button id="delete-data-btn" class="admin-btn danger">Purgar Datos de Jugadores</button>
-                    <button id="delete-accounts-btn" class="admin-btn extreme-danger">Eliminar Todas las Cuentas</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Clasificación -->
-    <div id="leaderboard-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-btn">&times;</button>
-            <h2>Top Jugadores (Fortuna Total)</h2>
-            <div id="leaderboard-container"><p>Cargando clasificación...</p></div>
-        </div>
-    </div>
-
-    <!-- Modal de Mercado -->
-    <div id="market-modal" class="modal-overlay hidden">
-        <div class="modal-content modal-large">
-            <button class="close-btn">&times;</button>
-            <h2>Mercado Intergaláctico</h2>
-            <div class="market-tabs">
-                <button id="market-buy-tab" class="market-tab active">Comprar Módulos</button>
-                <button id="market-sell-tab" class="market-tab">Vender Módulos</button>
-            </div>
-            <div id="market-buy-view" class="market-view"></div>
-            <div id="market-sell-view" class="market-view hidden"></div>
-        </div>
-    </div>
-
-    <!-- Modal de Misiones -->
-    <div id="missions-modal" class="modal-overlay hidden">
-        <div class="modal-content modal-large">
-            <button class="close-btn">&times;</button>
-            <h2>Panel de Misiones</h2>
-            <div id="missions-list"></div>
-        </div>
-    </div>
-
-    <!-- Scripts de Firebase y del Menú -->
+    <div class="version-tag">v1.0.0</div>
+    <div id="auth-modal" class="modal-overlay hidden"><div class="modal-content"><button class="close-btn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button><div id="login-form"><h2>Iniciar Sesión</h2><p id="login-error-message" class="error-message"></p><input type="email" id="login-email" placeholder="Correo electrónico" required><input type="password" id="login-password" placeholder="Contraseña" required><button id="login-btn">Entrar</button><p class="auth-switch">¿No tienes cuenta? <a href="#" id="show-register">Regístrate</a></p></div><div id="register-form" class="hidden"><h2>Crear Cuenta</h2><p id="register-error-message" class="error-message"></p><input type="text" id="register-username" placeholder="Nombre de usuario" required><input type="email" id="register-email" placeholder="Correo electrónico" required><input type="password" id="register-password" placeholder="Contraseña" required><button id="register-btn">Registrar</button><p class="auth-switch">¿Ya tienes cuenta? <a href="#" id="show-login">Inicia sesión</a></p></div></div></div>
+    <div id="credits-modal" class="modal-overlay hidden"><div class="modal-content credits-content"><button class="close-btn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button><h2>Créditos</h2><p class="credits-main">Todo por</p><h3 class="credits-logo">DZM Studios</h3><p class="credits-joke">Este juego fue testeado exhaustivamente por nuestros gatos.<br>Si encuentras un bug, échales la culpa a ellos.</p><div class="admin-entry"><input type="password" id="admin-key-input" placeholder="Acceso de Administrador..."></div><div id="admin-panel" class="hidden"><div class="admin-warning"><h3>PROTOCOLO DE EMERGENCIA: CÓDIGO ROJO</h3><p>ADVERTENCIA: Las siguientes acciones son simuladas en el cliente.</p></div><div class="admin-actions"><button id="delete-data-btn" class="admin-btn danger">Purgar Datos de Jugadores</button><button id="delete-accounts-btn" class="admin-btn extreme-danger">Eliminar Todas las Cuentas</button></div></div></div></div>
+    <div id="leaderboard-modal" class="modal-overlay hidden"><div class="modal-content"><button class="close-btn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button><h2>Top Jugadores (Fortuna Total)</h2><div id="leaderboard-container"><p>Cargando clasificación...</p></div></div></div>
+    <div id="market-modal" class="modal-overlay hidden"><div class="modal-content modal-large"><button class="close-btn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button><h2>Mercado Intergaláctico</h2><div class="market-tabs"><button id="market-buy-tab" class="market-tab active">Comprar Módulos</button><button id="market-sell-tab" class="market-tab">Vender Módulos</button></div><div id="market-buy-view" class="market-view"></div><div id="market-sell-view" class="market-view hidden"></div></div></div>
+    <div id="missions-modal" class="modal-overlay hidden"><div class="modal-content modal-large"><button class="close-btn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button><h2>Panel de Misiones</h2><div id="missions-list"></div></div></div>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
