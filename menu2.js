@@ -236,7 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         bullets.forEach((b, i) => {
             b.y -= b.speed;
-            // --- CAMBIO: Color de la bala del jugador cambiado a verde neón ---
             ctx.fillStyle = '#39FF14'; 
             ctx.fillRect(b.x, b.y, b.width, b.height);
             if (b.y < 0) bullets.splice(i, 1);
@@ -244,8 +243,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         enemyBullets.forEach((b, i) => {
             b.y += b.speed;
-            ctx.fillStyle = '#f96666';
+            // --- CAMBIO: Color y brillo de la bala enemiga mejorados ---
+            ctx.fillStyle = '#FF0000'; // Rojo neón
+            ctx.shadowBlur = 5;
+            ctx.shadowColor = '#FF0000';
             ctx.fillRect(b.x, b.y, b.width, b.height);
+            ctx.shadowBlur = 0; // Resetea el brillo para no afectar otros elementos
             if (b.y > canvas.height) enemyBullets.splice(i, 1);
         });
         

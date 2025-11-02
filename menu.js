@@ -125,7 +125,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- LÓGICA DE FORMULARIOS DE AUTENTICACIÓN ---
     function showAuthError(message, type) { const element = type === 'login' ? loginErrorMsg : registerErrorMsg; element.textContent = message; element.style.display = 'block'; }
     function clearAuthErrors() { loginErrorMsg.style.display = 'none'; registerErrorMsg.style.display = 'none'; }
-    function translateFirebaseError(error) { switch (error.code) { case 'auth/email-already-in-use': return 'Este correo ya está registrado.'; case 'auth/wrong-password': return 'Contraseña incorrecta.'; case 'auth/user-not-found': return 'No se encontró cuenta con este correo.'; case 'auth/invalid-email': return 'El correo no es válido.'; case 'auth/weak-password': return 'La contraseña debe tener al menos 6 caracteres.'; default: return 'Ha ocurrido un error inesperado.'; } }
+    
+    // ===== CAMBIO REALIZADO AQUÍ =====
+    function translateFirebaseError(error) { 
+        switch (error.code) { 
+            case 'auth/email-already-in-use': return 'Este correo ya está registrado.'; 
+            case 'auth/wrong-password': return 'Contraseña incorrecta.'; 
+            case 'auth/user-not-found': return 'No se encontró cuenta con este correo.'; 
+            case 'auth/invalid-email': return 'El correo no es válido.'; 
+            case 'auth/weak-password': return 'La contraseña debe tener al menos 6 caracteres.'; 
+            default: return 'Coloca una VPN.'; // Mensaje cambiado
+        } 
+    }
 
     document.getElementById('register-btn').addEventListener('click', () => {
         clearAuthErrors();
@@ -336,7 +347,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.sellerId === auth.currentUser.uid) throw new Error('No puedes comprar tu propio objeto.');
                 
-                // Fetch latest playerData inside transaction for consistency
                 const buyerDoc = await transaction.get(buyerRef);
                 const currentMoney = buyerDoc.data().money || 0;
                 if (currentMoney < data.price) throw new Error('No tienes suficientes créditos.');
@@ -406,7 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Detener listener cuando se cierra el modal para ahorrar recursos
     globalChatModal.addEventListener('click', (e) => {
         if (e.target === globalChatModal || e.target.closest('.close-btn')) {
              if (globalChatUnsubscribe) {
