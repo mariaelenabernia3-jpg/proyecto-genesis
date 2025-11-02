@@ -225,14 +225,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function initializeGame() {
-        loadingOverlay.classList.remove('hidden');
+        // La clase 'hidden' no existe en el CSS, la pantalla de carga se muestra por defecto con 'visible'.
+        // No es necesario quitar 'hidden' al inicio.
+        
         await Promise.all([ loadGame(), loadInitialMarketPrices() ]);
         updateUI();
         setInterval(gameLoop, 100);
         setInterval(requestSave, 15000);
         window.addEventListener('beforeunload', saveGame);
         listenForMarketUpdates();
-        loadingOverlay.classList.add('hidden');
+        
+        // --- CORRECCIÓN APLICADA AQUÍ ---
+        // Se quita la clase '.visible' para que el CSS en '#loading-overlay:not(.visible)'
+        // pueda ocultar la pantalla de carga con la transición de opacidad.
+        loadingOverlay.classList.remove('visible');
     }
 
     async function loadGame() {

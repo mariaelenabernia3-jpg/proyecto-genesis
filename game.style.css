@@ -1,25 +1,69 @@
-:root { --primary-font: 'Orbitron', sans-serif; --text-color: #e0e0e0; --accent-glow: #00ffff; --accent-sell: #2ecc71; --accent-buy: #f1c40f; --background-dark: #0a0a0c; }
-body { margin: 0; font-family: var(--primary-font); background-color: var(--background-dark); color: var(--text-color); overflow: hidden; opacity: 0; animation: fadeIn 1s forwards; }
+:root {
+    --primary-font: 'Orbitron', sans-serif;
+    --text-color: #e0e0e0;
+    --accent-glow: #00ffff;
+    --accent-sell: #2ecc71;
+    --accent-buy: #f1c40f;
+    --background-dark: #0a0a0c;
+}
+
+body {
+    margin: 0;
+    font-family: var(--primary-font);
+    background-color: var(--background-dark);
+    color: var(--text-color);
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeIn 1s forwards;
+}
+
 @keyframes fadeIn { to { opacity: 1; } }
-#scanlines-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4) 1px, transparent 1px, transparent 3px); }
-#loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--background-dark); display: flex; justify-content: center; align-items: center; z-index: 99; transition: opacity .5s ease-out; }
-#loading-overlay:not(.visible) { opacity: 0; pointer-events: none; }
-#game-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--accent-glow); animation: slideDown 0.5s ease-out; }
+
+#scanlines-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 100;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4) 1px, transparent 1px, transparent 3px);
+}
+
+#loading-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--background-dark); display: flex;
+    justify-content: center; align-items: center; z-index: 99;
+    transition: opacity .5s ease-out;
+}
+
+/* Esta regla CSS oculta el overlay CUANDO NO tiene la clase .visible */
+#loading-overlay:not(.visible) {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#game-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 30px; background: rgba(0,0,0,0.3);
+    border-bottom: 1px solid var(--accent-glow);
+    animation: slideDown 0.5s ease-out;
+}
+
 @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
 .back-btn { color: var(--accent-glow); text-decoration: none; transition: text-shadow 0.3s; }
 .back-btn:hover { text-shadow: 0 0 5px var(--accent-glow); }
 .resource-display, .location-display { font-size: 1.2rem; text-shadow: 0 0 5px var(--accent-glow); white-space: nowrap; }
+
 #game-container { display: grid; grid-template-columns: 1fr 1fr; height: calc(100vh - 66px); gap: 20px; padding: 20px; }
 #left-panel, #right-panel { display: flex; flex-direction: column; gap: 20px; min-height: 0; }
 .panel { background: rgba(255, 255, 255, 0.05); border: 1px solid #333; padding: 20px; display: flex; flex-direction: column; overflow: hidden; }
 #left-panel .panel { flex: 1 1 0; }
 .panel h2 { margin: 0 0 20px; text-align: center; color: var(--accent-glow); text-transform: uppercase; flex-shrink: 0; }
+
 .resource-list, .upgrades-list, .travel-list { overflow-y: auto; flex-grow: 1; padding-right: 10px; }
 .resource-line { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; }
 .resource-line:last-child { border-bottom: none; }
 .item-name { font-weight: bold; }
 .item-details { text-align: right; }
 .item-details span { display: block; font-size: 0.8rem; opacity: 0.7; }
+
 button { font-family: var(--primary-font); color: #000; border: none; padding: 8px 15px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; font-weight: bold; }
 .sell-btn { background-color: var(--accent-sell); }
 .sell-btn:hover { background-color: white; box-shadow: 0 0 10px var(--accent-sell); }
@@ -28,9 +72,11 @@ button { font-family: var(--primary-font); color: #000; border: none; padding: 8
 .travel-btn { background-color: var(--accent-glow); width: 100%; margin-top: 10px; }
 .travel-btn:hover { background-color: white; box-shadow: 0 0 10px var(--accent-glow); }
 .disabled { background-color: #555 !important; color: #999 !important; cursor: not-allowed !important; box-shadow: none !important; }
+
 .button-group { display: flex; gap: 8px; }
 .sell-all-btn { background-color: #27ae60; }
 .sell-all-btn:hover { background-color: white; box-shadow: 0 0 10px #27ae60; }
+
 .module-item { align-items: flex-start; }
 .module-info h4 { margin: 0 0 5px; }
 .module-info p { margin: 0; font-family: sans-serif; font-size: 0.8rem; opacity: 0.7; }
@@ -40,15 +86,26 @@ button { font-family: var(--primary-font); color: #000; border: none; padding: 8
 .item-rarity.rare { color: #3498db; text-shadow: 0 0 5px #3498db; }
 .item-rarity.legendary { color: #f1c40f; text-shadow: 0 0 5px #f1c40f; }
 .travel-cost { font-size: 0.8rem; opacity: 0.8; }
+
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #111; }
 ::-webkit-scrollbar-thumb { background: var(--accent-glow); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #fff; }
+
 #travel-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none; }
 #travel-overlay.visible { opacity: 1; pointer-events: all; }
 .travel-text { color: var(--accent-glow); text-shadow: 0 0 10px var(--accent-glow); text-transform: uppercase; letter-spacing: 2px; animation: text-flicker 3s infinite; }
 .ship-animation { width: 100%; overflow: hidden; position: absolute; }
 .ship { width: 80px; fill: none; stroke: var(--accent-glow); stroke-width: 3; filter: drop-shadow(0 0 10px var(--accent-glow)); animation: travel-animation 2.5s ease-in-out forwards; }
+
 @keyframes travel-animation { 0% { transform: translateX(-100px) scale(0.5); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateX(100vw) scale(1.5); opacity: 0; } }
 @keyframes text-flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-@media (max-width: 768px) { body { overflow-y: auto; } #game-header { flex-direction: column; gap: 10px; padding: 15px; } .resource-display, .location-display { font-size: 1rem; } #game-container { grid-template-columns: 1fr; height: auto; padding: 15px; gap: 15px; } .panel { padding: 15px; } #right-panel .panel:first-child { border-top: 1px solid var(--accent-glow); padding-top: 20px; } }
+
+@media (max-width: 768px) { 
+    body { overflow-y: auto; } 
+    #game-header { flex-direction: column; gap: 10px; padding: 15px; } 
+    .resource-display, .location-display { font-size: 1rem; } 
+    #game-container { grid-template-columns: 1fr; height: auto; padding: 15px; gap: 15px; } 
+    .panel { padding: 15px; } 
+    #right-panel .panel:first-child { border-top: 1px solid var(--accent-glow); padding-top: 20px; } 
+}

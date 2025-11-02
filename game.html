@@ -11,17 +11,50 @@
 </head>
 <body>
     <div id="scanlines-overlay"></div>
+    <!-- La pantalla de carga empieza visible por defecto -->
     <div id="loading-overlay" class="visible"><h1>CARGANDO DATOS DE LA NAVE...</h1></div>
+    
     <header id="game-header">
         <a href="menu.html" class="back-btn">&laquo; Volver al Menú</a>
         <div class="resource-display">Créditos: $<span id="money-count">0</span></div>
         <div class="location-display">Ubicación: <span id="planet-name"></span></div>
     </header>
+    
     <main id="game-container">
-        <section id="left-panel"><div class="panel"><h2>Inventario de Carga</h2><div id="inventory-list" class="resource-list"></div></div><div class="panel"><h2>Módulos de Nave</h2><div id="modules-list" class="resource-list"></div></div><div class="panel"><h2>Mejoras de Extracción</h2><div id="upgrades-list" class="upgrades-list"></div></div></section>
-        <section id="right-panel"><div class="panel"><h2>Mercado Planetario</h2><div id="market-list" class="resource-list"></div></div><div class="panel"><h2>Navegación</h2><div id="travel-list" class="travel-list"></div></div></section>
+        <section id="left-panel">
+            <div class="panel">
+                <h2>Inventario de Carga</h2>
+                <div id="inventory-list" class="resource-list"></div>
+            </div>
+            <div class="panel">
+                <h2>Módulos de Nave</h2>
+                <div id="modules-list" class="resource-list"></div>
+            </div>
+            <div class="panel">
+                <h2>Mejoras de Extracción</h2>
+                <div id="upgrades-list" class="upgrades-list"></div>
+            </div>
+        </section>
+        <section id="right-panel">
+            <div class="panel">
+                <h2>Mercado Planetario</h2>
+                <div id="market-list" class="resource-list"></div>
+            </div>
+            <div class="panel">
+                <h2>Navegación</h2>
+                <div id="travel-list" class="travel-list"></div>
+            </div>
+        </section>
     </main>
-    <div id="travel-overlay" class="hidden"><div class="ship-animation"><svg class="ship" viewBox="0 0 100 100"><path d="M 50 10 L 20 90 L 50 70 L 80 90 Z"></path></svg></div><h2 class="travel-text">SALTANDO AL HIPERESPACIO...</h2></div>
+    
+    <div id="travel-overlay" class="hidden">
+        <div class="ship-animation">
+            <svg class="ship" viewBox="0 0 100 100"><path d="M 50 10 L 20 90 L 50 70 L 80 90 Z"></path></svg>
+        </div>
+        <h2 class="travel-text">SALTANDO AL HIPERESPACIO...</h2>
+    </div>
+
+    <!-- Scripts de Firebase y del juego -->
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
