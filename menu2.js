@@ -185,8 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = canvas.getContext('2d');
     let player, enemies, bullets, enemyBullets, frameCount, piecesCollected, enemyLevel, gameLoopId;
     let bgY1, bgY2, bgSpeed = 1;
-    const spawnRate = 90; 
-    const maxEnemies = 12; 
+
+    // --- CAMBIO: Parámetros de dificultad ajustados ---
+    const spawnRate = 75; // Aparecen más rápido
+    const maxEnemies = 15; // Más enemigos en pantalla
 
     startPatrolBtn.addEventListener('click', () => {
         gameplayOverlay.classList.remove('hidden');
@@ -202,9 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const shipStats = playerData.patrolShip;
         player = {
             x: canvas.width / 2 - 35, y: canvas.height - 100, width: 70, height: 50,
-            // --- CAMBIO: Añadidas propiedades de hitbox para colisiones más justas ---
-            hitboxWidth: 50,  // ~25% más pequeño que el ancho de la imagen
-            hitboxHeight: 38, // ~25% más pequeño que el alto de la imagen
+            hitboxWidth: 50, hitboxHeight: 38,
             fireRate: shipStats.fireRate, damage: shipStats.damage,
             targetX: canvas.width / 2 - 35,
             draw() { ctx.drawImage(playerImg, this.x, this.y, this.width, this.height); },
@@ -237,20 +237,12 @@ document.addEventListener('DOMContentLoaded', () => {
         bullets.forEach((b, i) => { b.y -= b.speed; ctx.fillStyle = '#f1c40f'; ctx.fillRect(b.x, b.y, b.width, b.height); if (b.y < 0) bullets.splice(i, 1); });
         enemyBullets.forEach((b, i) => { b.y += b.speed; ctx.fillStyle = '#f96666'; ctx.fillRect(b.x, b.y, b.width, b.height); if (b.y > canvas.height) enemyBullets.splice(i, 1); });
         
-        // Bucle para actualizar enemigos
         for (let i = enemies.length - 1; i >= 0; i--) {
             const e = enemies[i];
             e.x += e.speedX * e.direction;
-            // --- CAMBIO: Los enemigos ahora se mueven hacia abajo ---
-            e.y += e.speedY;
+            // --- CAMBIO: Movimiento vertical ELIMINADO ---
 
             if (e.x <= 0 || e.x + e.width >= canvas.width) e.direction *= -1;
-            
-            // --- CAMBIO: Eliminar enemigos si salen por abajo ---
-            if (e.y > canvas.height) {
-                enemies.splice(i, 1);
-                continue; // Saltar al siguiente enemigo
-            }
             
             ctx.drawImage(enemyImg, e.x, e.y, e.width, e.height);
             if (frameCount % e.fireRate === 0) enemyBullets.push({ x: e.x + e.width / 2 - 3, y: e.y + e.height, width: 6, height: 12, speed: e.bulletSpeed });
@@ -269,17 +261,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Bucle para colisiones con el jugador
         for (let i = enemyBullets.length - 1; i >= 0; i--) {
             let b = enemyBullets[i];
-            // --- CAMBIO: La detección de colisión ahora usa el hitbox ajustado ---
             const hitboxX = player.x + (player.width - player.hitboxWidth) / 2;
             const hitboxY = player.y + (player.height - player.hitboxHeight) / 2;
-
-            if (b.x < hitboxX + player.hitboxWidth &&
-                b.x + b.width > hitboxX &&
-                b.y < hitboxY + player.hitboxHeight &&
-                b.y + b.height > hitboxY) {
+            if (b.x < hitboxX + player.hitboxWidth && b.x + b.width > hitboxX && b.y < hitboxY + player.hitboxHeight && b.y + b.height > hitboxY) {
                 gameOver(true);
                 return;
             }
@@ -290,17 +276,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function spawnEnemy() {
-        const health = 5 + Math.floor(enemyLevel * 1.8);
-        const speedX = 1 + enemyLevel * 0.2;
-        const fireRate = Math.max(15, 70 - enemyLevel * 2.5);
-        const bulletSpeed = 3 + enemyLevel * 0.3;
+        // --- CAMBIO: Estadísticas de enemigos ajustadas para mayor dificultad ---
+        const health = 8 + Math.floor(enemyLevel * 2.2);
+        const speedX = 1.5 + enemyLevel * 0.25; // Más rápidos lateralmente
+        const fireRate = Math.max(15, 80 - enemyLevel * 3); // Su cadencia mejora más rápido
+        const bulletSpeed = 4 + enemyLevel * 0.4; // Balas mucho más veloces
         const enemyWidth = 60;
         const enemyHeight = 45;
+        
         const randomX = Math.random() * (canvas.width - enemyWidth);
-        // --- CAMBIO: Añadida velocidad vertical para que se muevan hacia abajo ---
-        const speedY = 1 + Math.random() * 1; // Velocidad vertical variable para más dinamismo
+        // --- CAMBIO: Aparecen en una zona visible en la parte superior ---
+        const randomY = 50 + Math.random() * (canvas.height * 0.3); // Aparecen en el 30% superior de la pantalla
 
-        enemies.push({ x: randomX, y: -50, width: enemyWidth, height: enemyHeight, health, speedX, speedY, direction: 1, fireRate, bulletSpeed });
+        enemies.push({ x: randomX, y: randomY, width: enemyWidth, height: enemyHeight, health, speedX, direction: 1, fireRate, bulletSpeed });
     }
 
     function updateHUD() {
