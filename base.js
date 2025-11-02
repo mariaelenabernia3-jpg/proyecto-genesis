@@ -44,9 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const allianceChatContainer = document.getElementById('alliance-chat-container');
     const playerSearchInput = document.getElementById('player-search-input');
     const clearReportsBtn = document.getElementById('clear-reports-btn');
+    const allianceChatForm = document.getElementById('alliance-chat-form');
 
     function updateUI() {
-        if (typeof gameState.money === 'undefined') return;
+        if (!gameState || typeof gameState.money === 'undefined') return;
         moneyCountEl.textContent = Math.floor(gameState.money).toLocaleString();
         
         renderBaseManagementUI();
@@ -54,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderBattleReports();
     }
 
-    // ===== RENDERIZADO DE LA NUEVA INTERFAZ DE GESTIÓN =====
     function renderBaseManagementUI() {
         const defenseLevel = gameState.baseLevels?.Defenses || 0;
         const defenseCost = Math.ceil(BASE_CONFIG.DEFENSES.cost * Math.pow(1.5, defenseLevel));
@@ -91,7 +91,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             allianceInfoContainer.innerHTML = `<p>No perteneces a ninguna alianza.</p><div class="alliance-actions"><button onclick="createAlliance()" class="action-btn">Crear Alianza</button><button onclick="joinAlliance()" class="action-btn">Unirse a Alianza</button></div>`;
             allianceChatContainer.classList.add('hidden');
-            if (allianceChatUnsubscribe) allianceChatUnsubscribe(); // Detiene el listener si dejamos la alianza
+            if (allianceChatUnsubscribe) {
+                allianceChatUnsubscribe();
+                allianceChatUnsubscribe = null;
+            }
         }
     }
 
@@ -106,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         battleReportsEl.innerHTML = reports.map(report => {
             const isWin = report.type.includes('win');
             const isDefense = report.type.includes('defense');
-            const time = new Date(report.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const time = report.timestamp ? new Date(report.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
             let revengeButton = '';
             if (isDefense && report.attackerId) {
                 revengeButton = `<button class="revenge-btn" onclick="revengeAttack('${report.attackerId}', '${report.attackerName}')">Venganza</button>`;
@@ -119,7 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
-    // ===== LÓGICA DE UNIDADES Y MEJORAS =====
     window.buyDefenseUpgrade = () => {
         const level = gameState.baseLevels?.Defenses || 0;
         const cost = Math.ceil(BASE_CONFIG.DEFENSES.cost * Math.pow(1.5, level));
@@ -143,7 +145,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // ===== LÓGICA DE COMBATE RECONSTRUIDA =====
     window.attackPlayer = async (targetId, targetName) => {
         if (!confirm(`¿Confirmar ataque al piloto ${targetName}?`)) return;
         attackModal.classList.add('hidden');
@@ -162,16 +163,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("No puedes atacar a un miembro de tu propia alianza."); return;
             }
 
-            // Simulación de batalla
             const attackerUnits = attackerData.units || {};
             const defenseLevel = defenderData.baseLevels?.Defenses || 0;
             let totalDefensePower = defenseLevel * BASE_CONFIG.DEFENSES.power;
             
-            // Fase 1: Bombarderos contra Defensas
             let bomberPower = (attackerUnits.Bombers || 0) * BASE_CONFIG.UNITS.Bombers.power * (Math.random() * 0.5 + 0.75);
             let defensesDestroyed = Math.min(defenseLevel, Math.floor(bomberPower / BASE_CONFIG.DEFENSES.power));
             
-            // Fase 2: Batalla de naves (simplificada)
             let attackerFleetPower = 0;
             for (const [unit, config] of Object.entries(BASE_CONFIG.UNITS)) {
                 attackerFleetPower += (attackerUnits[unit] || 0) * config.power;
@@ -202,15 +200,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { console.error("Error en el ataque:", error); alert(`Error al atacar: ${error.message}`); }
     };
     
-    // ===== SISTEMA DE VENGANZA =====
     window.revengeAttack = (attackerId, attackerName) => {
         if (!attackerId || !attackerName) return;
         window.attackPlayer(attackerId, attackerName);
     };
 
-    // ===== LÓGICA DE CHAT =====
     function setupAllianceChatListener() {
-        if (allianceChatUnsubscribe) allianceChatUnsubscribe();
+        if (allianceChatUnsubscribe) return;
         if (!gameState.alliance) return;
 
         const chatQuery = db.collection('alliances').doc(gameState.alliance).collection('chat').orderBy('timestamp', 'asc').limitToLast(50);
@@ -225,11 +221,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 msgEl.innerHTML = `<div class="message-header"><span class="message-sender">${data.senderName}</span><span class="message-time">${time}</span></div><p class="message-content">${data.message}</p>`;
                 chatBox.appendChild(msgEl);
             });
-            chatBox.scrollTop = chatBox.scrollHeight;
+            setTimeout(() => { chatBox.scrollTop = chatBox.scrollHeight; }, 0);
+        }, error => {
+            console.error("Error en el listener del chat:", error);
         });
     }
 
-    document.getElementById('alliance-chat-form').addEventListener('submit', (e) => {
+    allianceChatForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const input = document.getElementById('chat-message-input');
         const message = input.value.trim();
@@ -239,8 +237,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 senderId: currentUser.uid,
                 message: message,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                input.value = '';
+            }).catch(error => {
+                console.error("Error al enviar mensaje:", error);
             });
-            input.value = '';
         }
     });
 
@@ -311,9 +312,16 @@ document.addEventListener('DOMContentLoaded', () => {
     window.leaveAlliance = async () => {
         if (!gameState.alliance || !confirm("¿Seguro que quieres abandonar tu alianza?")) return;
         const allianceName = gameState.alliance;
+        if (allianceChatUnsubscribe) {
+            allianceChatUnsubscribe();
+            allianceChatUnsubscribe = null;
+        }
         await db.collection('players').doc(currentUser.uid).update({ alliance: null });
         const allianceRef = db.collection('alliances').doc(allianceName);
-        await allianceRef.update({ members: firebase.firestore.FieldValue.arrayRemove({ id: currentUser.uid, name: currentUser.displayName }) });
+        const allianceDoc = await allianceRef.get();
+        if (allianceDoc.exists) {
+            await allianceRef.update({ members: firebase.firestore.FieldValue.arrayRemove({ id: currentUser.uid, name: currentUser.displayName }) });
+        }
     };
 
     async function loadAllianceMembers() {
@@ -323,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const allianceDoc = await db.collection('alliances').doc(gameState.alliance).get();
             if (allianceDoc.exists) {
                 const members = allianceDoc.data().members || [];
-                listEl.innerHTML = members.map(member => `<li>${member.name} ${member.id === currentUser.uid ? '(Tú)' : ''}</li>`).join('');
+                listEl.innerHTML = members.map(member => `<li>${member.name} ${member.id === currentUser.uid ? '(Tú)' : ''}</li>`).join('') || '<li>No hay miembros.</li>';
             }
         } catch (error) { console.error("Error cargando miembros de alianza:", error); listEl.innerHTML = "<li>Error al cargar miembros.</li>"; }
     }
@@ -332,10 +340,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             currentUser = user;
             db.collection('players').doc(user.uid).onSnapshot((doc) => {
+                const hadAlliance = gameState.alliance;
                 gameState = doc.exists ? doc.data() : { money: 0, baseLevels: { Defenses: 0 }, units: {}, notifications: [], alliance: null };
+                
                 if (!gameState.baseLevels) gameState.baseLevels = { Defenses: 0 };
                 if (!gameState.units) gameState.units = {};
                 if (!gameState.notifications) gameState.notifications = [];
+
+                // Si el estado de la alianza cambió (nos unimos o salimos), la UI debe reconstruirse completamente
+                if (hadAlliance !== gameState.alliance) {
+                    if (allianceChatUnsubscribe) {
+                        allianceChatUnsubscribe();
+                        allianceChatUnsubscribe = null;
+                    }
+                }
                 
                 updateUI();
                 loadingOverlay.classList.remove('visible');

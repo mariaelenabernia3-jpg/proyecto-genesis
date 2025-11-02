@@ -20,7 +20,6 @@
     
     <main id="game-container">
         <section id="left-panel">
-            <!-- ===== PANEL DE GESTIÓN DE BASE ACTUALIZADO ===== -->
             <div class="panel">
                 <h2>Gestión de la Base</h2>
                 <div id="base-management-list" class="upgrades-list"></div>
@@ -40,15 +39,19 @@
                 <h2>Conflictos Galácticos</h2>
                 <button id="attack-player-btn" class="action-btn">Atacar a un Piloto</button>
             </div>
-            <!-- ===== PANEL DE ALIANZAS ACTUALIZADO CON CHAT ===== -->
-            <div class="panel" id="alliance-panel">
+            <!-- ===== PANEL DE ALIANZAS REESTRUCTURADO ===== -->
+            <div class="panel panel-alliance">
                 <h2>Alianzas</h2>
-                <div id="alliance-info-container"></div>
+                <div id="alliance-info-container">
+                    <!-- Contenido se genera por JS -->
+                </div>
                 <div id="alliance-chat-container" class="hidden">
                     <h3>Chat de Alianza</h3>
-                    <div id="alliance-chat-box"></div>
+                    <div id="alliance-chat-box">
+                        <!-- Mensajes se generan por JS -->
+                    </div>
                     <form id="alliance-chat-form">
-                        <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." required>
+                        <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." required autocomplete="off">
                         <button type="submit">Enviar</button>
                     </form>
                 </div>

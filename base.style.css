@@ -12,8 +12,14 @@ body { margin: 0; font-family: var(--primary-font); background-color: var(--back
 .resource-display { font-size: 1.2rem; text-shadow: 0 0 5px var(--accent-glow); }
 #game-container { display: grid; grid-template-columns: 1fr 1fr; height: calc(100vh - 66px); gap: 20px; padding: 20px; }
 #left-panel, #right-panel { display: flex; flex-direction: column; gap: 20px; min-height: 0; }
-.panel { background: rgba(255, 255, 255, 0.05); border: 1px solid #333; padding: 20px; display: flex; flex-direction: column; overflow: hidden; flex: 1 1 0; }
-.panel h2, .panel h3 { margin: 0 0 20px; text-align: center; color: var(--accent-glow); text-transform: uppercase; }
+.panel { background: rgba(255, 255, 255, 0.05); border: 1px solid #333; padding: 20px; display: flex; flex-direction: column; overflow: hidden; flex: 1 1 auto; } /* Ajustado para mejor distribución */
+.panel h2, .panel h3 { margin: 0 0 20px; text-align: center; color: var(--accent-glow); text-transform: uppercase; flex-shrink: 0; }
+
+/* ===== CORRECCIÓN DE LAYOUT CRÍTICA ===== */
+#right-panel .panel:first-child { flex-grow: 0; flex-shrink: 0; } /* El panel de ataque no crece */
+.panel-alliance { flex-grow: 1; min-height: 0; } /* El panel de alianza toma todo el espacio restante */
+
+
 .upgrades-list, .log-list, .alliance-members { overflow-y: auto; padding-right: 10px; }
 .upgrade-line { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #222; }
 .upgrade-line .item-info { display: flex; flex-direction: column; }
@@ -48,15 +54,15 @@ body { margin: 0; font-family: var(--primary-font); background-color: var(--back
 .alliance-members { padding-left: 0; }
 .alliance-members li { list-style: none; padding: 5px 0; border-bottom: 1px solid #222; font-family: sans-serif; }
 
-/* ===== ESTILOS PARA CHAT DE ALIANZA ===== */
-#alliance-chat-container { display: flex; flex-direction: column; min-height: 0; flex-grow: 1; }
+/* ===== ESTILOS PARA CHAT DE ALIANZA (AJUSTADOS) ===== */
+#alliance-chat-container { display: flex; flex-direction: column; min-height: 0; flex-grow: 1; margin-top: 20px; }
 #alliance-chat-box { flex-grow: 1; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; font-family: sans-serif; font-size: 0.9rem; display: flex; flex-direction: column; gap: 8px; }
 .chat-message { display: flex; flex-direction: column; }
 .message-header { display: flex; justify-content: space-between; align-items: baseline; }
 .message-sender { font-weight: bold; color: var(--accent-glow); }
 .message-time { font-size: 0.7rem; color: #888; }
 .message-content { margin: 2px 0 0 0; word-break: break-word; }
-#alliance-chat-form { display: flex; margin-top: 10px; gap: 10px; }
+#alliance-chat-form { display: flex; margin-top: 10px; gap: 10px; flex-shrink: 0; }
 #chat-message-input { flex-grow: 1; background: #333; border: 1px solid #555; color: white; padding: 8px; font-family: sans-serif; }
 #alliance-chat-form button { background: var(--accent-glow); color: #000; font-family: var(--primary-font); border: none; padding: 8px 15px; cursor: pointer; }
 
