@@ -53,6 +53,33 @@ body { margin: 0; font-family: var(--primary-font); background-color: var(--back
 .modal-large { max-width: 800px; }
 .missions-divider { text-align: center; text-transform: uppercase; color: var(--accent-glow); margin: 40px 0 20px; letter-spacing: 2px; }
 
+/* ===== CAMBIOS Y AJUSTES REALIZADOS AQUÍ ===== */
+
+#missions-list {
+    max-height: 65vh; /* Altura máxima antes de que aparezca el scroll */
+    overflow-y: auto; /* Scroll vertical solo cuando sea necesario */
+    padding-right: 15px; /* Espacio para que el scroll no tape el contenido */
+    margin-right: -15px; /* Compensa el padding para mantener la alineación */
+}
+
+/* Estilo de la barra de scroll (para navegadores Webkit como Chrome/Safari) */
+#missions-list::-webkit-scrollbar {
+    width: 8px;
+}
+#missions-list::-webkit-scrollbar-track {
+    background: #222;
+    border-radius: 4px;
+}
+#missions-list::-webkit-scrollbar-thumb {
+    background-color: var(--accent-glow);
+    border-radius: 4px;
+    border: 2px solid #222;
+}
+#missions-list::-webkit-scrollbar-thumb:hover {
+    background-color: #fff;
+}
+
+
 @media (max-width: 768px) {
     #menu-container { padding: 0; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; }
     .title-container { text-align: center; }

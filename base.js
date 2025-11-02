@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // TU CONFIGURACIÓN DE FIREBASE YA INTEGRADA
     const firebaseConfig = {
       apiKey: "AIzaSyB5XMrJtKg-EzP3Tea3-yllj-NZEoDXJlY",
       authDomain: "proyecto-genesis-f2425.firebaseapp.com",
@@ -14,105 +13,140 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
     
-    // --- CONEXIÓN AL EMULADOR LOCAL ---
     if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
         console.log("BASE: MODO DE PRUEBA LOCAL DETECTADO. CONECTANDO A EMULADORES...");
         auth.useEmulator("http://localhost:9099");
         db.useEmulator("localhost", 8080);
     }
 
-    // --- CONFIGURACIÓN Y SELECTORES ---
+    // ===== CONFIGURACIÓN DE UNIDADES DE COMBATE =====
     const BASE_CONFIG = {
-        UPGRADES: {
-            Defenses: { name: "Torretas de Defensa", cost: 1000 },
-            Attacks: { name: "Flota de Ataque", cost: 1000 }
+        DEFENSES: { cost: 1000, power: 10 },
+        UNITS: {
+            Fighters: { name: "Cazas", cost: 500, power: 5, strongAgainst: 'Bombers' },
+            Bombers: { name: "Bombarderos", cost: 1500, power: 2, strongAgainst: 'Defenses' },
+            Frigates: { name: "Fragatas", cost: 3000, power: 12, strongAgainst: 'Fighters' }
         }
     };
     
     let gameState = {};
     let currentUser = null;
+    let allPlayers = [];
+    let allianceChatUnsubscribe = null;
     const moneyCountEl = document.getElementById('money-count');
-    const upgradesListEl = document.getElementById('base-upgrades-list');
+    const baseManagementListEl = document.getElementById('base-management-list');
     const attackPlayerBtn = document.getElementById('attack-player-btn');
     const attackModal = document.getElementById('attack-modal');
     const playerListContainer = document.getElementById('player-list-container');
-    const attackLogEl = document.getElementById('attack-log');
+    const battleReportsEl = document.getElementById('battle-reports-list');
     const loadingOverlay = document.getElementById('loading-overlay');
     const allianceInfoContainer = document.getElementById('alliance-info-container');
+    const allianceChatContainer = document.getElementById('alliance-chat-container');
+    const playerSearchInput = document.getElementById('player-search-input');
+    const clearReportsBtn = document.getElementById('clear-reports-btn');
 
-    // --- LÓGICA DE LA INTERFAZ ---
     function updateUI() {
         if (typeof gameState.money === 'undefined') return;
         moneyCountEl.textContent = Math.floor(gameState.money).toLocaleString();
-        upgradesListEl.innerHTML = Object.entries(BASE_CONFIG.UPGRADES).map(([key, upgrade]) => {
-            const level = gameState.baseLevels ? (gameState.baseLevels[key] || 0) : 0;
-            const cost = Math.ceil(upgrade.cost * Math.pow(1.5, level));
-            return `<div class="upgrade-line"><span>${upgrade.name} (Nvl ${level})</span><button onclick="buyBaseUpgrade('${key}')" class="upgrade-btn ${gameState.money < cost ? 'disabled':''}">Coste: ${cost.toLocaleString()}</button></div>`;
-        }).join('');
+        
+        renderBaseManagementUI();
         renderAllianceUI();
+        renderBattleReports();
+    }
+
+    // ===== RENDERIZADO DE LA NUEVA INTERFAZ DE GESTIÓN =====
+    function renderBaseManagementUI() {
+        const defenseLevel = gameState.baseLevels?.Defenses || 0;
+        const defenseCost = Math.ceil(BASE_CONFIG.DEFENSES.cost * Math.pow(1.5, defenseLevel));
+        
+        let unitsHTML = Object.entries(BASE_CONFIG.UNITS).map(([key, unit]) => {
+            const count = gameState.units?.[key] || 0;
+            const cost = Math.ceil(unit.cost * Math.pow(1.1, count));
+            return `<div class="upgrade-line">
+                        <div class="item-info">
+                            <span>${unit.name} (Cant: ${count})</span>
+                            <small>Poder: ${unit.power} / Fuerte contra: ${unit.strongAgainst}</small>
+                        </div>
+                        <button onclick="buildUnit('${key}')" class="upgrade-btn ${gameState.money < cost ? 'disabled':''}">Coste: ${cost.toLocaleString()}</button>
+                    </div>`;
+        }).join('');
+
+        baseManagementListEl.innerHTML = `
+            <div class="upgrade-line">
+                <div class="item-info">
+                    <span>Torretas de Defensa (Nvl ${defenseLevel})</span>
+                    <small>Poder por nivel: ${BASE_CONFIG.DEFENSES.power}</small>
+                </div>
+                <button onclick="buyDefenseUpgrade()" class="upgrade-btn ${gameState.money < defenseCost ? 'disabled':''}">Coste: ${defenseCost.toLocaleString()}</button>
+            </div>
+            ${unitsHTML}`;
     }
     
     function renderAllianceUI() {
         if (gameState.alliance) {
             allianceInfoContainer.innerHTML = `<h3>Alianza: ${gameState.alliance}</h3><ul id="alliance-members-list" class="alliance-members">Cargando miembros...</ul><button onclick="leaveAlliance()" class="action-btn">Abandonar Alianza</button>`;
+            allianceChatContainer.classList.remove('hidden');
             loadAllianceMembers();
+            setupAllianceChatListener();
         } else {
             allianceInfoContainer.innerHTML = `<p>No perteneces a ninguna alianza.</p><div class="alliance-actions"><button onclick="createAlliance()" class="action-btn">Crear Alianza</button><button onclick="joinAlliance()" class="action-btn">Unirse a Alianza</button></div>`;
+            allianceChatContainer.classList.add('hidden');
+            if (allianceChatUnsubscribe) allianceChatUnsubscribe(); // Detiene el listener si dejamos la alianza
         }
     }
 
-    async function loadAllianceMembers() {
-        const listEl = document.getElementById('alliance-members-list');
-        if (!listEl || !gameState.alliance) return;
-        try {
-            const allianceDoc = await db.collection('alliances').doc(gameState.alliance).get();
-            if (allianceDoc.exists) {
-                const members = allianceDoc.data().members || [];
-                listEl.innerHTML = members.map(member => `<li>${member.name} ${member.id === currentUser.uid ? '(Tú)' : ''}</li>`).join('');
+    function renderBattleReports() {
+        const reports = (gameState.notifications || []).slice().reverse();
+        if (reports.length === 0) {
+            battleReportsEl.innerHTML = '<p>No hay actividad reciente.</p>';
+            clearReportsBtn.style.display = 'none';
+            return;
+        }
+        clearReportsBtn.style.display = 'block';
+        battleReportsEl.innerHTML = reports.map(report => {
+            const isWin = report.type.includes('win');
+            const isDefense = report.type.includes('defense');
+            const time = new Date(report.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            let revengeButton = '';
+            if (isDefense && report.attackerId) {
+                revengeButton = `<button class="revenge-btn" onclick="revengeAttack('${report.attackerId}', '${report.attackerName}')">Venganza</button>`;
             }
-        } catch (error) {
-            console.error("Error cargando miembros de alianza:", error);
-            listEl.innerHTML = "<li>Error al cargar miembros.</li>";
-        }
+            return `<div class="log-item ${isWin ? 'win' : 'loss'}">
+                        <div class="log-details">${report.message}</div>
+                        ${revengeButton}
+                        <time>${time}</time>
+                    </div>`;
+        }).join('');
     }
 
-    // --- ACCIONES DEL JUGADOR ---
-    window.buyBaseUpgrade = (key) => {
-        if (!gameState.baseLevels) gameState.baseLevels = { Defenses: 0, Attacks: 0 };
-        const level = gameState.baseLevels[key] || 0;
-        const cost = Math.ceil(BASE_CONFIG.UPGRADES[key].cost * Math.pow(1.5, level));
+    // ===== LÓGICA DE UNIDADES Y MEJORAS =====
+    window.buyDefenseUpgrade = () => {
+        const level = gameState.baseLevels?.Defenses || 0;
+        const cost = Math.ceil(BASE_CONFIG.DEFENSES.cost * Math.pow(1.5, level));
         if (gameState.money >= cost) {
-            db.collection('players').doc(auth.currentUser.uid).update({
-                [`baseLevels.${key}`]: firebase.firestore.FieldValue.increment(1),
+            db.collection('players').doc(currentUser.uid).update({
+                'baseLevels.Defenses': firebase.firestore.FieldValue.increment(1),
                 money: firebase.firestore.FieldValue.increment(-cost)
             });
         }
     };
 
-    attackPlayerBtn.addEventListener('click', async () => {
-        attackModal.classList.remove('hidden');
-        playerListContainer.innerHTML = "<p>Buscando pilotos...</p>";
-        try {
-            const snapshot = await db.collection('leaderboard').orderBy('money', 'desc').limit(20).get();
-            const players = [];
-            snapshot.forEach(doc => {
-                if (doc.id !== currentUser.uid) {
-                    players.push({ id: doc.id, ...doc.data() });
-                }
+    window.buildUnit = (unitType) => {
+        const unit = BASE_CONFIG.UNITS[unitType];
+        const count = gameState.units?.[unitType] || 0;
+        const cost = Math.ceil(unit.cost * Math.pow(1.1, count));
+        if (gameState.money >= cost) {
+            db.collection('players').doc(currentUser.uid).update({
+                [`units.${unitType}`]: firebase.firestore.FieldValue.increment(1),
+                money: firebase.firestore.FieldValue.increment(-cost)
             });
-            playerListContainer.innerHTML = players.map(p => `<div class="player-list-item"><span>${p.playerName} (Fortuna: $${p.money.toLocaleString()})</span><button onclick="attackPlayer('${p.id}', '${p.playerName}')">Atacar</button></div>`).join('') || "<p>No se encontraron otros pilotos.</p>";
-        } catch(error) {
-            console.error("Error al buscar jugadores:", error);
-            playerListContainer.innerHTML = "<p>Error al contactar con la red de pilotos.</p>";
         }
-    });
+    };
     
-    attackModal.querySelector('.close-btn').addEventListener('click', () => attackModal.classList.add('hidden'));
-
+    // ===== LÓGICA DE COMBATE RECONSTRUIDA =====
     window.attackPlayer = async (targetId, targetName) => {
         if (!confirm(`¿Confirmar ataque al piloto ${targetName}?`)) return;
         attackModal.classList.add('hidden');
-        attackLogEl.innerHTML = `<div class="log-item">Lanzando ataque contra ${targetName}...</div>` + (attackLogEl.innerHTML.includes('<p>') ? '' : attackLogEl.innerHTML);
         
         try {
             const attackerRef = db.collection('players').doc(currentUser.uid);
@@ -125,57 +159,128 @@ document.addEventListener('DOMContentLoaded', () => {
             const defenderData = defenderDoc.data();
 
             if (attackerData.alliance && defenderData.alliance && attackerData.alliance === defenderData.alliance) {
-                attackLogEl.innerHTML = `<div class="log-item loss">No puedes atacar a un miembro de tu propia alianza.</div>` + (attackLogEl.innerHTML.includes('<p>') ? '' : attackLogEl.innerHTML);
-                return;
+                alert("No puedes atacar a un miembro de tu propia alianza."); return;
             }
 
-            const attackerPower = (attackerData.baseLevels && attackerData.baseLevels.Attacks) || 0;
-            const defenderPower = (defenderData.baseLevels && defenderData.baseLevels.Defenses) || 0;
+            // Simulación de batalla
+            const attackerUnits = attackerData.units || {};
+            const defenseLevel = defenderData.baseLevels?.Defenses || 0;
+            let totalDefensePower = defenseLevel * BASE_CONFIG.DEFENSES.power;
+            
+            // Fase 1: Bombarderos contra Defensas
+            let bomberPower = (attackerUnits.Bombers || 0) * BASE_CONFIG.UNITS.Bombers.power * (Math.random() * 0.5 + 0.75);
+            let defensesDestroyed = Math.min(defenseLevel, Math.floor(bomberPower / BASE_CONFIG.DEFENSES.power));
+            
+            // Fase 2: Batalla de naves (simplificada)
+            let attackerFleetPower = 0;
+            for (const [unit, config] of Object.entries(BASE_CONFIG.UNITS)) {
+                attackerFleetPower += (attackerUnits[unit] || 0) * config.power;
+            }
+            attackerFleetPower *= (Math.random() * 0.5 + 0.75);
+            
+            let battleResult = attackerFleetPower - (totalDefensePower * (1 - defensesDestroyed / (defenseLevel || 1)));
 
-            const attackRoll = attackerPower * (Math.random() * 0.4 + 0.8);
-            const defenseRoll = defenderPower * (Math.random() * 0.4 + 0.8);
-
-            const notification = { id: `notif_${Date.now()}`, read: false, timestamp: new Date().toISOString() };
-
-            if (attackRoll > defenseRoll) {
-                // --- CAMBIO INICIA: LÓGICA DE BOTÍN MEJORADA ---
-                const powerRatio = defenseRoll > 0 ? attackRoll / defenseRoll : 5; // Si el defensor no tiene defensa, el ratio es alto.
-                
-                // El botín base es 2% y aumenta con el ratio de poder, con un máximo de 15%.
-                let lootPercentage = 0.02 + ((powerRatio - 1) * 0.01);
-                lootPercentage = Math.min(0.15, lootPercentage); // Se asegura que el máximo sea 15%
-                
+            const now = new Date().toISOString();
+            if (battleResult > 0) { // VICTORIA
+                const powerRatio = (totalDefensePower > 0) ? (attackerFleetPower / totalDefensePower) : 5;
+                let lootPercentage = Math.max(0.01, 0.02 + ((powerRatio - 1) * 0.01));
+                lootPercentage = Math.min(0.15, lootPercentage);
                 const loot = Math.floor(defenderData.money * lootPercentage);
-                // --- CAMBIO TERMINA ---
-                
-                const PVP_LEGENDARY_CHANCE = 1 / 1000;
-                let newModule = null;
-                if (Math.random() < PVP_LEGENDARY_CHANCE) {
-                    const droneSchematic = { id: 'l05', name: 'Esquema de Dron de Combate', description: 'Desbloquea la capacidad de construir drones de ataque en tu base.', rarity: 'legendary', effect: { type: 'unlock_pvp_unit' } };
-                    if (!(attackerData.modules || []).some(m => m.id === 'l05')) {
-                         newModule = { ...droneSchematic, id: `mod_${Date.now()}` };
-                         alert("¡VICTORIA CRÍTICA!\n\nHas recuperado un 'Esquema de Dron de Combate'.");
-                    }
-                }
-                
-                const attackerUpdate = { money: firebase.firestore.FieldValue.increment(loot) };
-                if (newModule) {
-                    attackerUpdate.modules = firebase.firestore.FieldValue.arrayUnion(newModule);
-                }
 
-                await attackerRef.update(attackerUpdate);
-                await defenderRef.update({ money: firebase.firestore.FieldValue.increment(-loot), notifications: firebase.firestore.FieldValue.arrayUnion({ ...notification, type: 'defense_loss', message: `¡Fuiste atacado por ${currentUser.displayName}! Perdiste $${loot.toLocaleString()} créditos.` }) });
-                attackLogEl.innerHTML = `<div class="log-item win">¡Victoria! Has saqueado $${loot.toLocaleString()} de ${targetName}.</div>` + (attackLogEl.innerHTML.includes('<p>') ? '' : attackLogEl.innerHTML);
-            } else {
-                await defenderRef.update({ notifications: firebase.firestore.FieldValue.arrayUnion({ ...notification, type: 'defense_win', message: `¡Repeliste un ataque de ${currentUser.displayName}!` }) });
-                attackLogEl.innerHTML = `<div class="log-item loss">¡Derrota! Las defensas de ${targetName} eran muy fuertes.</div>` + (attackLogEl.innerHTML.includes('<p>') ? '' : attackLogEl.innerHTML);
+                await attackerRef.update({
+                    money: firebase.firestore.FieldValue.increment(loot),
+                    notifications: firebase.firestore.FieldValue.arrayUnion({ timestamp: now, type: 'attack_win', message: `¡Victoria! Saqueaste $${loot.toLocaleString()} de ${targetName}.` })
+                });
+                await defenderRef.update({
+                    money: firebase.firestore.FieldValue.increment(-loot),
+                    notifications: firebase.firestore.FieldValue.arrayUnion({ timestamp: now, type: 'defense_loss', message: `¡Fuiste atacado por ${currentUser.displayName}! Perdiste $${loot.toLocaleString()} créditos.`, attackerId: currentUser.uid, attackerName: currentUser.displayName })
+                });
+            } else { // DERROTA
+                await attackerRef.update({ notifications: firebase.firestore.FieldValue.arrayUnion({ timestamp: now, type: 'attack_loss', message: `Derrota contra ${targetName}. Sus defensas resistieron.` }) });
+                await defenderRef.update({ notifications: firebase.firestore.FieldValue.arrayUnion({ timestamp: now, type: 'defense_win', message: `¡Repeliste un ataque de ${currentUser.displayName}!`, attackerId: currentUser.uid, attackerName: currentUser.displayName }) });
             }
-        } catch (error) {
-            console.error("Error en el ataque:", error);
-            attackLogEl.innerHTML = `<div class="log-item loss">Error: ${error.message}</div>` + (attackLogEl.innerHTML.includes('<p>') ? '' : attackLogEl.innerHTML);
-        }
+        } catch (error) { console.error("Error en el ataque:", error); alert(`Error al atacar: ${error.message}`); }
     };
     
+    // ===== SISTEMA DE VENGANZA =====
+    window.revengeAttack = (attackerId, attackerName) => {
+        if (!attackerId || !attackerName) return;
+        window.attackPlayer(attackerId, attackerName);
+    };
+
+    // ===== LÓGICA DE CHAT =====
+    function setupAllianceChatListener() {
+        if (allianceChatUnsubscribe) allianceChatUnsubscribe();
+        if (!gameState.alliance) return;
+
+        const chatQuery = db.collection('alliances').doc(gameState.alliance).collection('chat').orderBy('timestamp', 'asc').limitToLast(50);
+        allianceChatUnsubscribe = chatQuery.onSnapshot(snapshot => {
+            const chatBox = document.getElementById('alliance-chat-box');
+            chatBox.innerHTML = '';
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const msgEl = document.createElement('div');
+                msgEl.classList.add('chat-message');
+                const time = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                msgEl.innerHTML = `<div class="message-header"><span class="message-sender">${data.senderName}</span><span class="message-time">${time}</span></div><p class="message-content">${data.message}</p>`;
+                chatBox.appendChild(msgEl);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+    }
+
+    document.getElementById('alliance-chat-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = document.getElementById('chat-message-input');
+        const message = input.value.trim();
+        if (message && gameState.alliance) {
+            db.collection('alliances').doc(gameState.alliance).collection('chat').add({
+                senderName: currentUser.displayName,
+                senderId: currentUser.uid,
+                message: message,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            input.value = '';
+        }
+    });
+
+    attackPlayerBtn.addEventListener('click', async () => {
+        attackModal.classList.remove('hidden');
+        playerListContainer.innerHTML = "<p>Buscando pilotos...</p>";
+        playerSearchInput.value = '';
+        try {
+            const snapshot = await db.collection('leaderboard').orderBy('money', 'desc').limit(100).get();
+            allPlayers = [];
+            snapshot.forEach(doc => {
+                if (doc.id !== currentUser.uid) {
+                    allPlayers.push({ id: doc.id, ...doc.data() });
+                }
+            });
+            renderPlayerList(allPlayers);
+        } catch(error) {
+            console.error("Error al buscar jugadores:", error);
+            playerListContainer.innerHTML = "<p>Error al contactar con la red de pilotos.</p>";
+        }
+    });
+
+    playerSearchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filteredPlayers = allPlayers.filter(p => p.playerName.toLowerCase().includes(searchTerm));
+        renderPlayerList(filteredPlayers);
+    });
+
+    function renderPlayerList(players) {
+        playerListContainer.innerHTML = players.map(p => `<div class="player-list-item"><span>${p.playerName} (Fortuna: $${p.money.toLocaleString()})</span><button onclick="attackPlayer('${p.id}', '${p.playerName}')">Atacar</button></div>`).join('') || "<p>No se encontraron pilotos con ese nombre.</p>";
+    }
+    
+    attackModal.querySelector('.close-btn').addEventListener('click', () => attackModal.classList.add('hidden'));
+    
+    clearReportsBtn.addEventListener('click', () => {
+        if (confirm("¿Estás seguro de que quieres borrar todos los reportes de batalla?")) {
+            db.collection('players').doc(currentUser.uid).update({ notifications: [] });
+        }
+    });
+
     window.createAlliance = async () => {
         if (gameState.alliance) { alert("Ya perteneces a una alianza."); return; }
         const name = prompt("Nombre para tu nueva alianza (3-15 caracteres):");
@@ -210,37 +315,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const allianceRef = db.collection('alliances').doc(allianceName);
         await allianceRef.update({ members: firebase.firestore.FieldValue.arrayRemove({ id: currentUser.uid, name: currentUser.displayName }) });
     };
-    
+
+    async function loadAllianceMembers() {
+        const listEl = document.getElementById('alliance-members-list');
+        if (!listEl || !gameState.alliance) return;
+        try {
+            const allianceDoc = await db.collection('alliances').doc(gameState.alliance).get();
+            if (allianceDoc.exists) {
+                const members = allianceDoc.data().members || [];
+                listEl.innerHTML = members.map(member => `<li>${member.name} ${member.id === currentUser.uid ? '(Tú)' : ''}</li>`).join('');
+            }
+        } catch (error) { console.error("Error cargando miembros de alianza:", error); listEl.innerHTML = "<li>Error al cargar miembros.</li>"; }
+    }
+
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
             db.collection('players').doc(user.uid).onSnapshot((doc) => {
-                if (doc.exists) {
-                    gameState = doc.data();
-                } else {
-                    gameState = { money: 0, baseLevels: { Defenses: 0, Attacks: 0 }, notifications: [], alliance: null };
-                }
-                
-                if (!gameState.baseLevels) gameState.baseLevels = { Defenses: 0, Attacks: 0 };
+                gameState = doc.exists ? doc.data() : { money: 0, baseLevels: { Defenses: 0 }, units: {}, notifications: [], alliance: null };
+                if (!gameState.baseLevels) gameState.baseLevels = { Defenses: 0 };
+                if (!gameState.units) gameState.units = {};
                 if (!gameState.notifications) gameState.notifications = [];
                 
-                const unreadNotifications = gameState.notifications.filter(n => !n.read);
-                if (unreadNotifications.length > 0) {
-                    let notificationMessages = "NUEVOS REPORTES DE COMBATE:\n\n";
-                    unreadNotifications.forEach(n => {
-                        notificationMessages += `- ${n.message}\n`;
-                        const notifIndex = gameState.notifications.findIndex(item => item.id === n.id);
-                        if (notifIndex > -1) { gameState.notifications[notifIndex].read = true; }
-                    });
-                    alert(notificationMessages);
-                    db.collection('players').doc(user.uid).update({ notifications: gameState.notifications });
-                }
-                
                 updateUI();
-                loadingOverlay.classList.add('hidden');
+                loadingOverlay.classList.remove('visible');
             }, (error) => {
                 console.error("Error al cargar datos del jugador: ", error);
-                loadingOverlay.classList.add('hidden');
+                loadingOverlay.classList.remove('visible');
             });
         } else {
             window.location.href = 'menu.html';

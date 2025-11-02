@@ -11,7 +11,6 @@
 </head>
 <body>
     <div id="scanlines-overlay"></div>
-    <!-- La pantalla de carga empieza visible por defecto -->
     <div id="loading-overlay" class="visible"><h1>CARGANDO DATOS DE LA NAVE...</h1></div>
     
     <header id="game-header">
@@ -43,6 +42,11 @@
             <div class="panel">
                 <h2>Navegación</h2>
                 <div id="travel-list" class="travel-list"></div>
+            </div>
+            <!-- ===== NUEVO PANEL DE NOTIFICACIONES ===== -->
+            <div class="panel panel-notifications">
+                <h2>Registro de Sucesos</h2>
+                <div id="notifications-list" class="notifications-list"></div>
             </div>
         </section>
     </main>

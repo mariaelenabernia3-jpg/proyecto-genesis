@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // TU CONFIGURACIÓN DE FIREBASE YA INTEGRADA
     const firebaseConfig = {
       apiKey: "AIzaSyB5XMrJtKg-EzP3Tea3-yllj-NZEoDXJlY",
       authDomain: "proyecto-genesis-f2425.firebaseapp.com",
@@ -14,34 +13,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // --- CONEXIÓN AL EMULADOR LOCAL ---
     if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
         console.log("JUEGO: MODO DE PRUEBA LOCAL DETECTADO. CONECTANDO A EMULADORES...");
         auth.useEmulator("http://localhost:9099");
         db.useEmulator("localhost", 8080);
     }
 
-    // --- CONFIGURACIÓN DEL JUEGO (REEQUILIBRADA) ---
     const CONFIG = {
-        MATERIALS: { 
-            Helium3: { name: "Helio-3", baseValue: 2 },
-            AsteroidOre: { name: "Mineral de Asteroide", baseValue: 8 },
-            IceCrystals: { name: "Cristales de Hielo", baseValue: 20 },
-            AlienArtifacts: { name: "Artefactos Alienígenas", baseValue: 100 } 
-        },
-        PLANETS: { 
-            Terra: { name: "Terra", travelCost: 0 }, 
-            Mars: { name: "Marte", travelCost: 500 }, 
-            Europa: { name: "Europa", travelCost: 2500 }, 
-            Kepler186f: { name: "Kepler-186f", travelCost: 10000 },
-            ProximaCentauri: { name: "Proxima Centauri", travelCost: 50000, requiresMap: true }
-        },
-        UPGRADES: { 
-            Drones: { name: "Drones de Minería", cost: 25, baseProd: { Helium3: 0.5 } }, 
-            Frigates: { name: "Fragatas de Carga", cost: 200, baseProd: { AsteroidOre: 0.2 } }, 
-            IceDrills: { name: "Taladros Criogénicos", cost: 1000, baseProd: { IceCrystals: 0.1 } }, 
-            Scanners: { name: "Escáneres de Largo Alcance", cost: 5000, baseProd: { AlienArtifacts: 0.01 } }
-        },
+        MATERIALS: { Helium3: { name: "Helio-3", baseValue: 2 }, AsteroidOre: { name: "Mineral de Asteroide", baseValue: 8 }, IceCrystals: { name: "Cristales de Hielo", baseValue: 20 }, AlienArtifacts: { name: "Artefactos Alienígenas", baseValue: 100 } },
+        PLANETS: { Terra: { name: "Terra", travelCost: 0 }, Mars: { name: "Marte", travelCost: 500 }, Europa: { name: "Europa", travelCost: 2500 }, Kepler186f: { name: "Kepler-186f", travelCost: 10000 }, ProximaCentauri: { name: "Proxima Centauri", travelCost: 50000, requiresMap: true } },
+        UPGRADES: { Drones: { name: "Drones de Minería", cost: 25, baseProd: { Helium3: 0.5 } }, Frigates: { name: "Fragatas de Carga", cost: 200, baseProd: { AsteroidOre: 0.2 } }, IceDrills: { name: "Taladros Criogénicos", cost: 1000, baseProd: { IceCrystals: 0.1 } }, Scanners: { name: "Escáneres de Largo Alcance", cost: 5000, baseProd: { AlienArtifacts: 0.01 } } },
         MODULES: [
             { id: 'c01', name: 'Micro-Condensador', description: '+3% a las ganancias por ventas.', rarity: 'common', effect: { type: 'sell_all', value: 1.03 } },
             { id: 'c02', name: 'Algoritmo de Minería Simple', description: '+2% a la producción de todos los materiales.', rarity: 'common', effect: { type: 'prod_all', value: 1.02 } },
@@ -68,7 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
           marketListEl = document.getElementById('market-list'), 
           travelListEl = document.getElementById('travel-list'), 
           loadingOverlay = document.getElementById('loading-overlay'),
-          travelOverlay = document.getElementById('travel-overlay');
+          travelOverlay = document.getElementById('travel-overlay'),
+          notificationsListEl = document.getElementById('notifications-list');
 
     let saveTimeout;
     function requestSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(saveGame, 2000); }
@@ -81,17 +63,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function getDefaultState() { 
-        return { 
-            money: 200, currentPlanet: 'Terra', 
-            inventory: Object.keys(CONFIG.MATERIALS).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), 
-            upgradeLevels: Object.keys(CONFIG.UPGRADES).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), 
-            modules: [], unlockedPlanets: ['Terra'], lastLogin: null, 
-            achievedMissions: [], completedMissions: [],
-            dailyMissionProgress: {}, completedDailyMissions: [],
-            baseLevels: { Defenses: 0, Attacks: 0 },
-            notifications: [], alliance: null 
-        }; 
+    function getDefaultState() { return { money: 200, currentPlanet: 'Terra', inventory: Object.keys(CONFIG.MATERIALS).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), upgradeLevels: Object.keys(CONFIG.UPGRADES).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}), modules: [], unlockedPlanets: ['Terra'], lastLogin: null, achievedMissions: [], completedMissions: [], dailyMissionProgress: {}, completedDailyMissions: [], baseLevels: { Defenses: 0, Attacks: 0 }, notifications: [], alliance: null }; }
+    
+    // ===== NUEVA FUNCIÓN PARA NOTIFICACIONES =====
+    function addNotification(message, type = 'info') {
+        if (!gameState.notifications) gameState.notifications = [];
+        gameState.notifications.push({ message, type, date: new Date().toISOString() });
+        if (gameState.notifications.length > 50) gameState.notifications.shift();
+    }
+
+    // ===== NUEVA FUNCIÓN PARA FEEDBACK VISUAL =====
+    function showFloatingText(text, element, color) {
+        const rect = element.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const floatingText = document.createElement('div');
+        floatingText.textContent = text;
+        floatingText.className = 'floating-text';
+        Object.assign(floatingText.style, { left: `${x}px`, top: `${y}px`, color: color });
+        document.body.appendChild(floatingText);
+        setTimeout(() => floatingText.remove(), 1500);
     }
     
     function updateUI() {
@@ -103,15 +94,20 @@ document.addEventListener('DOMContentLoaded', () => {
         upgradesListEl.innerHTML = Object.entries(gameState.upgradeLevels).map(([key, level]) => { const upgrade = CONFIG.UPGRADES[key]; const cost = Math.ceil(upgrade.cost * Math.pow(1.15, level)); return `<div class="resource-line"><div class="item-name">${upgrade.name} (Nvl ${level})</div><button onclick="buyUpgrade('${key}')" class="upgrade-btn ${gameState.money < cost ? 'disabled' : ''}">Coste: ${cost.toLocaleString()}</button></div>`; }).join('');
         
         if (marketPrices && marketPrices[gameState.currentPlanet]) {
-            marketListEl.innerHTML = Object.entries(CONFIG.MATERIALS).map(([key, material]) => { const modifier = marketPrices[gameState.currentPlanet][key]; const price = material.baseValue * modifier; const hasMaterial = gameState.inventory[key] >= 1; return `<div class="resource-line"><div class="item-name">${material.name}<div class="item-details"><span>Precio: $${price.toFixed(2)}</span></div></div><div class="button-group"><button onclick="sellMaterial('${key}', 1)" class="sell-btn ${!hasMaterial ? 'disabled' : ''}">Vender 1</button><button onclick="sellMaterial('${key}', 'all')" class="sell-all-btn ${!hasMaterial ? 'disabled' : ''}">Vender Todo</button></div></div>`; }).join('');
+            marketListEl.innerHTML = Object.entries(CONFIG.MATERIALS).map(([key, material]) => {
+                const modifier = marketPrices[gameState.currentPlanet][key];
+                const price = material.baseValue * modifier;
+                const hasMaterial = gameState.inventory[key] >= 1;
+                const amountOwned = Math.floor(gameState.inventory[key]);
+                const totalValue = Math.floor(price * amountOwned); // ===== CÁLCULO PARA EL BOTÓN =====
+                return `<div class="resource-line"><div class="item-name">${material.name}<div class="item-details"><span>Precio: $${price.toFixed(2)}</span></div></div><div class="button-group"><button onclick="sellMaterial(event, '${key}', 1)" class="sell-btn ${!hasMaterial ? 'disabled' : ''}">Vender 1</button><button onclick="sellMaterial(event, '${key}', 'all')" class="sell-all-btn ${!hasMaterial ? 'disabled' : ''}">Vender Todo ($${totalValue.toLocaleString()})</button></div></div>`;
+            }).join('');
         } else {
             marketListEl.innerHTML = "<p>Sincronizando con la red de mercados...</p>";
         }
 
         travelListEl.innerHTML = Object.entries(CONFIG.PLANETS).map(([key, planet]) => { 
-            if (planet.requiresMap && !(gameState.modules || []).some(m => m.effect.type === 'unlock_planet' && m.effect.planet === key)) {
-                return '';
-            }
+            if (planet.requiresMap && !(gameState.modules || []).some(m => m.effect.type === 'unlock_planet' && m.effect.planet === key)) return '';
             const isUnlocked = gameState.unlockedPlanets.includes(key); 
             let travelCost = planet.travelCost;
             (gameState.modules || []).forEach(m => { if (m.effect.type === 'travel_cost') travelCost *= m.effect.value; });
@@ -120,9 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
         
         modulesListEl.innerHTML = (gameState.modules || []).map(module => `<div class="resource-line module-item"><div class="module-info"><h4 class="item-rarity ${module.rarity}">${module.name}</h4><p>${module.description}</p></div></div>`).join('') || "<p>No hay módulos instalados.</p>";
+
+        notificationsListEl.innerHTML = (gameState.notifications || []).slice(-10).reverse().map(n => `<div class="notification-item type-${n.type}">${n.message}</div>`).join('') || "<p>Sin sucesos recientes.</p>";
     }
 
-    window.sellMaterial = (key, amount) => {
+    window.sellMaterial = (event, key, amount) => {
         let amountToSell = (amount === 'all') ? Math.floor(gameState.inventory[key]) : parseInt(amount, 10);
         if (gameState.inventory[key] >= amountToSell && amountToSell > 0) {
             const material = CONFIG.MATERIALS[key];
@@ -130,8 +128,15 @@ document.addEventListener('DOMContentLoaded', () => {
             let price = material.baseValue * modifier;
             (gameState.modules || []).forEach(m => { if (m.effect.type === 'sell_all') price *= m.effect.value; });
             const earnings = price * amountToSell;
+
+            // ===== CONFIRMACIÓN PARA "VENDER TODO" =====
+            if (amount === 'all' && !confirm(`¿Vender ${amountToSell.toLocaleString()} de ${material.name} por $${Math.floor(earnings).toLocaleString()}?`)) return;
+            
             gameState.inventory[key] -= amountToSell;
             gameState.money += earnings;
+            
+            showFloatingText(`+$${Math.floor(earnings).toLocaleString()}`, event.target, 'var(--accent-sell)'); // ===== FEEDBACK VISUAL =====
+
             if (!gameState.dailyMissionProgress) gameState.dailyMissionProgress = {};
             gameState.dailyMissionProgress[`sell_${key}`] = (gameState.dailyMissionProgress[`sell_${key}`] || 0) + amountToSell;
             gameState.dailyMissionProgress['earn'] = (gameState.dailyMissionProgress['earn'] || 0) + earnings;
@@ -168,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     gameState.unlockedPlanets.push(key);
                     if (!gameState.achievedMissions.includes('M03') && key === 'Mars') {
                         gameState.achievedMissions.push('M03');
-                        alert(`¡Misión Actualizada! Has completado el objetivo de "Viajero Frecuente".`);
+                        addNotification('Misión: Objetivo "Viajero Frecuente" completado.', 'reward');
                     }
                     travelAction();
                 }
@@ -188,7 +193,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (roll < 10) { foundModule = CONFIG.MODULES.find(m => m.id === 'r02'); } 
             else if (roll < 100) { foundModule = CONFIG.MODULES.find(m => m.id === 'u02'); }
         }
-        if (foundModule) { const newModule = { ...foundModule, id: `mod_${Date.now()}` }; gameState.modules.push(newModule); alert(`¡Descubrimiento Afortunado!\n\nHas encontrado: ${newModule.name} (${newModule.rarity})`); requestSave(); }
+        if (foundModule) {
+            const newModule = { ...foundModule, id: `mod_${Date.now()}` };
+            if (!gameState.modules) gameState.modules = [];
+            gameState.modules.push(newModule);
+            addNotification(`Módulo Encontrado: ${newModule.name} (${newModule.rarity})`, 'reward'); // ===== NOTIFICACIÓN EN LUGAR DE ALERTA =====
+            requestSave();
+        }
     }
 
     function checkForPlanetArtifact(planetKey) {
@@ -197,8 +208,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const planetArtifact = CONFIG.MODULES.find(m => m.planet === planetKey);
             if (planetArtifact && !(gameState.modules || []).some(m => m.id === planetArtifact.id)) {
                 const newModule = { ...planetArtifact, id: `mod_${Date.now()}` };
+                if (!gameState.modules) gameState.modules = [];
                 gameState.modules.push(newModule);
-                alert(`\n\n¡¡¡HALLAZGO ÚNICO!!!\n\nExplorando ${CONFIG.PLANETS[planetKey].name}, has encontrado un artefacto legendario: ${newModule.name}.\n\n`);
+                addNotification(`¡Hallazgo Legendario en ${CONFIG.PLANETS[planetKey].name}: ${newModule.name}!`, 'reward'); // ===== NOTIFICACIÓN EN LUGAR DE ALERTA =====
                 if (newModule.effect.type === 'grant_money') { gameState.money += newModule.effect.value; }
                 requestSave();
             }
@@ -225,19 +237,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function initializeGame() {
-        // La clase 'hidden' no existe en el CSS, la pantalla de carga se muestra por defecto con 'visible'.
-        // No es necesario quitar 'hidden' al inicio.
-        
         await Promise.all([ loadGame(), loadInitialMarketPrices() ]);
         updateUI();
         setInterval(gameLoop, 100);
         setInterval(requestSave, 15000);
         window.addEventListener('beforeunload', saveGame);
         listenForMarketUpdates();
-        
-        // --- CORRECCIÓN APLICADA AQUÍ ---
-        // Se quita la clase '.visible' para que el CSS en '#loading-overlay:not(.visible)'
-        // pueda ocultar la pantalla de carga con la transición de opacidad.
         loadingOverlay.classList.remove('visible');
     }
 
